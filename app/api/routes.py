@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Query, Request, HTTPException
 from datetime import date
-import asyncio
 
 from app.api.schemas import (
     HealthResponse,
@@ -9,8 +8,12 @@ from app.api.schemas import (
     StationsNearbyResponse,
     StationTemperatureSeriesResponse,
 )
-from app.core.exceptions import StationNotFoundError, DataUnavailableError
-from app.api.helpers import _validate_years, _to_station_result
+from app.core.exceptions import StationNotFoundError
+from app.api.helpers import (
+    run_in_thread_or_raise_http_503,
+    to_station_result,
+    validate_years_or_raise_http_400,
+)
 
 router = APIRouter(prefix="/api")
 
@@ -37,22 +40,19 @@ async def stations_nearby(
 ):
     station_search = request.app.state.station_search
 
-    await _validate_years(request, startYear, endYear)
+    await validate_years_or_raise_http_400(request, startYear, endYear)
 
-    try:
-        candidates = await asyncio.to_thread(
-            station_search.find_nearby,
-            lat=lat,
-            lon=lon,
-            radius_km=radiusKm,
-            limit=limit,
-            start_year=startYear,
-            end_year=endYear,
-        )
-    except DataUnavailableError as e:
-        raise HTTPException(status_code=503, detail=f"Service temporarily unavailable: {str(e)}")
+    candidates = await run_in_thread_or_raise_http_503(
+        station_search.find_nearby,
+        lat=lat,
+        lon=lon,
+        radius_km=radiusKm,
+        limit=limit,
+        start_year=startYear,
+        end_year=endYear,
+    )
 
-    results = [_to_station_result(candidate) for candidate in candidates]
+    results = [to_station_result(candidate) for candidate in candidates]
 
     return StationsNearbyResponse(results=results)
 
@@ -66,10 +66,10 @@ async def station_series(
 ):
     series_service = request.app.state.series_service
 
-    await _validate_years(request, startYear, endYear)
+    await validate_years_or_raise_http_400(request, startYear, endYear)
 
     try:
-        years, series = await asyncio.to_thread(
+        years, series = await run_in_thread_or_raise_http_503(
             series_service.compute_temperature_series,
             station_id=stationId,
             start_year=startYear,
@@ -78,8 +78,6 @@ async def station_series(
         )
     except StationNotFoundError:
         raise HTTPException(status_code=404, detail=f"Station '{stationId}' not found.")
-    except DataUnavailableError as e:
-        raise HTTPException(status_code=503, detail=f"Service temporarily unavailable: {str(e)}")
 
     return StationTemperatureSeriesResponse(
         stationId=stationId,

@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
+
 from app.data.http_cache import HttpCache
 
 AWS_BASE = "https://noaa-ghcn-pds.s3.amazonaws.com"
@@ -12,6 +14,7 @@ class MetadataPaths:
     stations: Path
     inventory: Path
 
+
 class NoaaMetadataFiles:
     def __init__(self, http: HttpCache, cache_dir: Path, meta_ttl_seconds: int):
         self.http = http
@@ -19,16 +22,16 @@ class NoaaMetadataFiles:
         self.meta_ttl_seconds = meta_ttl_seconds
 
     def ensure(self) -> MetadataPaths:
-        paths = self._metadata_paths()
+        metadata_paths = self._metadata_paths()
 
-        self._ensure_file(STATIONS_URL, paths.stations, self.meta_ttl_seconds)
-        self._ensure_file(INVENTORY_URL, paths.inventory, self.meta_ttl_seconds)
+        self._ensure_file(STATIONS_URL, metadata_paths.stations, self.meta_ttl_seconds)
+        self._ensure_file(INVENTORY_URL, metadata_paths.inventory, self.meta_ttl_seconds)
 
         # safety fallback (z.B. first run)
-        self._ensure_file(STATIONS_URL, paths.stations, None, require_exists=True)
-        self._ensure_file(INVENTORY_URL, paths.inventory, None, require_exists=True)
+        self._ensure_file(STATIONS_URL, metadata_paths.stations, None, require_exists=True)
+        self._ensure_file(INVENTORY_URL, metadata_paths.inventory, None, require_exists=True)
 
-        return paths
+        return metadata_paths
 
     def _metadata_paths(self) -> MetadataPaths:
         metadata_dir = self.cache_dir / "meta"
@@ -39,10 +42,10 @@ class NoaaMetadataFiles:
     def _ensure_file(
         self,
         url: str,
-        path: Path,
+        dest_path: Path,
         max_age_seconds: int | None,
         require_exists: bool = False,
     ) -> None:
-        if require_exists and path.exists():
+        if require_exists and dest_path.exists():
             return
-        self.http.get_to_file(url, path, max_age_seconds=max_age_seconds)
+        self.http.get_to_file(url, dest_path, max_age_seconds=max_age_seconds)

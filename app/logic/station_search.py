@@ -5,7 +5,7 @@ from operator import attrgetter
 
 from app.logic.geo import bounding_box, haversine_km
 from app.logic.metadata_store import MetadataStore
-from app.models.station import Availability
+from app.models.station import Availability, Station
 
 
 @dataclass(frozen=True)
@@ -18,8 +18,8 @@ class StationCandidate:
     availability: Availability  
 
 
-def _passes_year_filter(first: int, last: int, start_year: int, end_year: int) -> bool:
-    return first <= start_year and last >= end_year
+def _covers_year_range(first_year: int, last_year: int, start_year: int, end_year: int) -> bool:
+    return first_year <= start_year and last_year >= end_year
 
 
 class StationSearchService:
@@ -72,11 +72,11 @@ class StationSearchService:
         return candidates[:limit]
 
     @staticmethod
-    def _is_within_bbox(station: "Station", min_lat: float, max_lat: float, min_lon: float, max_lon: float) -> bool:
+    def _is_within_bbox(station: Station, min_lat: float, max_lat: float, min_lon: float, max_lon: float) -> bool:
         return min_lat <= station.lat <= max_lat and min_lon <= station.lon <= max_lon
 
     @staticmethod
-    def _distance_km(lat: float, lon: float, station: "Station") -> float:
+    def _distance_km(lat: float, lon: float, station: Station) -> float:
         return haversine_km(lat, lon, station.lat, station.lon)
 
     @staticmethod
@@ -89,17 +89,17 @@ class StationSearchService:
         start_year: int,
         end_year: int,
     ) -> Optional[Availability]:
-        inventory = self.metadata.inventory_by_id.get(station_id, {})
+        station_inventory = self.metadata.inventory_by_id.get(station_id, {})
 
-        tmin_availability = inventory.get("TMIN")
-        tmax_availability = inventory.get("TMAX")
+        tmin_availability = station_inventory.get("TMIN")
+        tmax_availability = station_inventory.get("TMAX")
         if tmin_availability is None or tmax_availability is None:
             return None
-        if not _passes_year_filter(
+        if not _covers_year_range(
             tmin_availability.firstYear, tmin_availability.lastYear, start_year, end_year
         ):
             return None
-        if not _passes_year_filter(
+        if not _covers_year_range(
             tmax_availability.firstYear, tmax_availability.lastYear, start_year, end_year
         ):
             return None

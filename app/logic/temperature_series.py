@@ -13,7 +13,7 @@ from app.core.exceptions import StationNotFoundError
 
 # by_station has no header:
 # 0 ID, 1 DATE(YYYYMMDD), 2 ELEMENT, 3 DATA_VALUE, 4 MFLAG, 5 QFLAG, 6 SFLAG, 7 OBS_TIME
-COLS = ["ID", "DATE", "ELEMENT", "VALUE", "MFLAG", "QFLAG", "SFLAG", "OBS_TIME"]
+DAILY_DATA_COLUMNS = ["ID", "DATE", "ELEMENT", "VALUE", "MFLAG", "QFLAG", "SFLAG", "OBS_TIME"]
 
 DailyDfLoader = Callable[[Path, str, bool, int, int], pd.DataFrame]
 
@@ -44,14 +44,21 @@ class TemperatureSeriesService:
         station = self.metadata.stations_by_id[station_id]
         is_southern = float(station.lat) < 0
 
-        data_path = self.station_files.ensure_station_gz(station_id)
-        df = self._load_and_filter_data(data_path, station_id, ignore_qflag, start_year, end_year, is_southern)
+        station_path = self.station_files.ensure_station_gz(station_id)
+        period_df = self._load_and_filter_data(
+            station_path,
+            station_id,
+            ignore_qflag,
+            start_year,
+            end_year,
+            is_southern,
+        )
         
-        if df.empty:
+        if period_df.empty:
             return years, series
 
-        aggregated_data = self._aggregate_data(df)
-        self._fill_series(series, years, aggregated_data)
+        aggregated_df = self._aggregate_data(period_df)
+        self._fill_series(series, years, aggregated_df)
         return years, series
 
     def _initialize_series(self, start_year: int, end_year: int) -> Tuple[List[int], Dict[str, List[Optional[float]]]]:
@@ -59,36 +66,36 @@ class TemperatureSeriesService:
         series = _empty_series(years)
         return years, series
 
-    def _load_and_filter_data(self, data_path: Path, station_id: str, ignore_qflag: bool, start_year: int, end_year: int, is_southern: bool) -> pd.DataFrame:
-        df = self._daily_df_loader(
-            gz_path=data_path,
+    def _load_and_filter_data(self, station_path: Path, station_id: str, ignore_qflag: bool, start_year: int, end_year: int, is_southern: bool) -> pd.DataFrame:
+        daily_df = self._daily_df_loader(
+            gz_path=station_path,
             station_id=station_id,
             ignore_qflag=ignore_qflag,
             start_year=start_year,
             end_year=end_year,
         )
-        if df.empty:
-            return df
+        if daily_df.empty:
+            return daily_df
 
-        df = _add_time_cols(df)
-        df = _add_period_views(df, is_southern)
-        return self._filter_period_years(df, start_year, end_year)
+        daily_df = _add_time_cols(daily_df)
+        period_df = _add_period_views(daily_df, is_southern)
+        return self._filter_period_years(period_df, start_year, end_year)
 
     @staticmethod
-    def _filter_period_years(df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame:
-        return df[(df["periodYear"] >= start_year) & (df["periodYear"] <= end_year)]
+    def _filter_period_years(period_df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame:
+        return period_df[(period_df["periodYear"] >= start_year) & (period_df["periodYear"] <= end_year)]
 
-    def _aggregate_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        table = (
-            df.groupby(["periodYear", "period", "ELEMENT"])["valueC"]
+    def _aggregate_data(self, period_df: pd.DataFrame) -> pd.DataFrame:
+        aggregated_df = (
+            period_df.groupby(["periodYear", "period", "ELEMENT"])["valueC"]
             .mean()
             .unstack("ELEMENT")
             .reset_index()
         )
-        return table
+        return aggregated_df
 
-    def _fill_series(self, series: Dict[str, List[Optional[float]]], years: List[int], table: pd.DataFrame) -> None:
-        _fill_series(series, years, table)
+    def _fill_series(self, series: Dict[str, List[Optional[float]]], years: List[int], aggregated_df: pd.DataFrame) -> None:
+        _fill_series(series, years, aggregated_df)
 
 
 def _load_daily_df(
@@ -110,13 +117,29 @@ def _load_daily_df(
     # NEU: Jan/Feb des Folgejahrs mit einlesen, damit Winter(end_year) = Dez(end_year) + Jan/Feb(end_year+1)
     end_date = f"{end_year + 1}0229"
 
-    chunks: List[pd.DataFrame] = []
+    filtered_chunks: List[pd.DataFrame] = []
 
-    for chunk in pd.read_csv(
+    for chunk_df in _iter_daily_chunks(gz_path):
+        filtered_chunk_df = _filter_daily_chunk(
+            chunk_df=chunk_df,
+            station_id=station_id,
+            start_date=start_date,
+            end_date=end_date,
+            ignore_qflag=ignore_qflag,
+        )
+        if filtered_chunk_df.empty:
+            continue
+        filtered_chunks.append(filtered_chunk_df)
+
+    return _build_daily_value_df(filtered_chunks)
+
+
+def _iter_daily_chunks(gz_path: Path):
+    return pd.read_csv(
         gz_path,
         compression="gzip",
         header=None,
-        names=COLS,
+        names=DAILY_DATA_COLUMNS,
         usecols=["ID", "DATE", "ELEMENT", "VALUE", "QFLAG"],
         dtype={
             "ID": "string",
@@ -127,46 +150,54 @@ def _load_daily_df(
         },
         low_memory=True,
         chunksize=1_000_000,
-    ):
-        # Früh filtern
-        chunk = chunk[(chunk["DATE"] >= start_date) & (chunk["DATE"] <= end_date)]
-        if chunk.empty:
-            continue
+    )
 
-        chunk = chunk[chunk["ID"] == station_id]
-        if chunk.empty:
-            continue
 
-        chunk = chunk[chunk["ELEMENT"].isin(ELEMENTS)]
-        if chunk.empty:
-            continue
+def _filter_daily_chunk(
+    chunk_df: pd.DataFrame,
+    station_id: str,
+    start_date: str,
+    end_date: str,
+    ignore_qflag: bool,
+) -> pd.DataFrame:
+    filtered_df = chunk_df[(chunk_df["DATE"] >= start_date) & (chunk_df["DATE"] <= end_date)]
+    if filtered_df.empty:
+        return filtered_df
 
-        chunk = chunk[chunk["VALUE"] != -9999]
-        if chunk.empty:
-            continue
+    filtered_df = filtered_df[filtered_df["ID"] == station_id]
+    if filtered_df.empty:
+        return filtered_df
 
-        if ignore_qflag:
-            chunk = chunk[chunk["QFLAG"].fillna("") == ""]
-            if chunk.empty:
-                continue
+    filtered_df = filtered_df[filtered_df["ELEMENT"].isin(ELEMENTS)]
+    if filtered_df.empty:
+        return filtered_df
 
-        chunks.append(chunk)
+    filtered_df = filtered_df[filtered_df["VALUE"] != -9999]
+    if filtered_df.empty:
+        return filtered_df
 
-    if not chunks:
+    if ignore_qflag:
+        filtered_df = filtered_df[filtered_df["QFLAG"].fillna("") == ""]
+
+    return filtered_df
+
+
+def _build_daily_value_df(filtered_chunks: List[pd.DataFrame]) -> pd.DataFrame:
+    if not filtered_chunks:
         return pd.DataFrame(columns=["DATE", "ELEMENT", "valueC"])
 
-    df = pd.concat(chunks, ignore_index=True)
-    df["valueC"] = df["VALUE"] / 10.0
-    return df[["DATE", "ELEMENT", "valueC"]]
+    daily_df = pd.concat(filtered_chunks, ignore_index=True)
+    daily_df["valueC"] = daily_df["VALUE"] / 10.0
+    return daily_df[["DATE", "ELEMENT", "valueC"]]
 
 
-def _add_time_cols(df: pd.DataFrame) -> pd.DataFrame:
-    df["year"] = df["DATE"].str.slice(0, 4).astype("int32")
-    df["month"] = df["DATE"].str.slice(4, 6).astype("int8")
-    return df
+def _add_time_cols(daily_df: pd.DataFrame) -> pd.DataFrame:
+    daily_df["year"] = daily_df["DATE"].str.slice(0, 4).astype("int32")
+    daily_df["month"] = daily_df["DATE"].str.slice(4, 6).astype("int8")
+    return daily_df
 
 
-def _add_period_views(df: pd.DataFrame, is_southern: bool) -> pd.DataFrame:
+def _add_period_views(daily_df: pd.DataFrame, is_southern: bool) -> pd.DataFrame:
     """
     Baut 2 Views:
     - YEAR: period="YEAR", periodYear=year
@@ -176,12 +207,12 @@ def _add_period_views(df: pd.DataFrame, is_southern: bool) -> pd.DataFrame:
            => Jan/Feb der boundary-season zählen ins Vorjahr
     """
     # YEAR view
-    year_view = df.copy()
+    year_view = daily_df.copy()
     year_view["period"] = "YEAR"
     year_view["periodYear"] = year_view["year"]
 
     # SEASON view (vektorisiert)
-    season_view = df.copy()
+    season_view = daily_df.copy()
     month_series = season_view["month"]
 
     season_labels = _build_northern_season_labels(month_series)
@@ -198,14 +229,14 @@ def _add_period_views(df: pd.DataFrame, is_southern: bool) -> pd.DataFrame:
     period_years = _compute_period_years_for_boundary_season(season_view, boundary_season)
     season_view["periodYear"] = period_years
 
-    out = pd.concat(
+    combined_df = pd.concat(
         [
             year_view[["periodYear", "period", "ELEMENT", "valueC"]],
             season_view[["periodYear", "period", "ELEMENT", "valueC"]],
         ],
         ignore_index=True,
     )
-    return out
+    return combined_df
 
 
 def _build_northern_season_labels(month_series: pd.Series) -> np.ndarray:
@@ -227,45 +258,45 @@ def _map_southern_hemisphere_seasons(season_labels: np.ndarray) -> np.ndarray:
 
 
 def _compute_period_years_for_boundary_season(
-    season_view: pd.DataFrame,
+    season_df: pd.DataFrame,
     boundary_season: str,
 ) -> pd.Series:
-    period_years = season_view["year"].copy()
-    jan_feb_boundary_mask = season_view["month"].isin([1, 2]) & (season_view["period"] == boundary_season)
+    period_years = season_df["year"].copy()
+    jan_feb_boundary_mask = season_df["month"].isin([1, 2]) & (season_df["period"] == boundary_season)
     period_years.loc[jan_feb_boundary_mask] = period_years.loc[jan_feb_boundary_mask] - 1
     return period_years
 
 
 def _empty_series(years: List[int]) -> Dict[str, List[Optional[float]]]:
-    n = len(years)
-    out: Dict[str, List[Optional[float]]] = {}
+    year_count = len(years)
+    series: Dict[str, List[Optional[float]]] = {}
     for period in PERIODS:
         for element in ELEMENTS:
-            out[f"{period}_{element}"] = [None] * n
-    return out
+            series[f"{period}_{element}"] = [None] * year_count
+    return series
 
 
-def _fill_series(series: Dict[str, List[Optional[float]]], years: List[int], table: pd.DataFrame) -> None:
-    start_year = years[0]
-    n = len(years)
+def _fill_series(series: Dict[str, List[Optional[float]]], years: List[int], aggregated_df: pd.DataFrame) -> None:
+    first_year = years[0]
+    year_count = len(years)
 
-    for _, row in table.iterrows():
-        y = int(row["periodYear"])
-        period = str(row["period"])
-        idx = y - start_year
-        if idx < 0 or idx >= n:
+    for _, aggregated_row in aggregated_df.iterrows():
+        period_year = int(aggregated_row["periodYear"])
+        period = str(aggregated_row["period"])
+        year_index = period_year - first_year
+        if year_index < 0 or year_index >= year_count:
             continue
 
-        _set_value(series, period, "TMIN", idx, row.get("TMIN"))
-        _set_value(series, period, "TMAX", idx, row.get("TMAX"))
+        _set_value(series, period, "TMIN", year_index, aggregated_row.get("TMIN"))
+        _set_value(series, period, "TMAX", year_index, aggregated_row.get("TMAX"))
 
 
-def _set_value(series: Dict[str, List[Optional[float]]], period: str, element: str, idx: int, raw_value) -> None:
-    key = f"{period}_{element}"
-    series[key][idx] = _round_or_none(raw_value)
+def _set_value(series: Dict[str, List[Optional[float]]], period: str, element: str, year_index: int, raw_celsius_value) -> None:
+    series_key = f"{period}_{element}"
+    series[series_key][year_index] = _round_or_none(raw_celsius_value)
 
 
-def _round_or_none(x) -> Optional[float]:
-    if x is None or pd.isna(x):
+def _round_or_none(value) -> Optional[float]:
+    if value is None or pd.isna(value):
         return None
-    return round(float(x), 1)
+    return round(float(value), 1)

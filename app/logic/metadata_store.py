@@ -22,8 +22,8 @@ class MetadataStore:
         self._mtime_key: Tuple[float, float] = (-1.0, -1.0)
 
     def ensure_loaded(self) -> None:
-        paths = self._ensure_paths()
-        current_key = self._make_mtime_key(paths.stations, paths.inventory)
+        metadata_paths = self._ensure_paths()
+        current_key = self._make_mtime_key(metadata_paths.stations, metadata_paths.inventory)
 
         # Dateien unverändert -> nichts tun
         if self._mtime_key == current_key:
@@ -31,13 +31,13 @@ class MetadataStore:
 
         # Dateien neu/anders -> unter Lock neu laden
         with self._lock:
-            paths = self._ensure_paths()
-            current_key = self._make_mtime_key(paths.stations, paths.inventory)
+            metadata_paths = self._ensure_paths()
+            current_key = self._make_mtime_key(metadata_paths.stations, metadata_paths.inventory)
             if self._mtime_key == current_key:
                 return
 
-            self.stations_by_id = _parse_stations(paths.stations)
-            self.inventory_by_id = _parse_inventory(paths.inventory)
+            self.stations_by_id = _parse_stations(metadata_paths.stations)
+            self.inventory_by_id = _parse_inventory(metadata_paths.inventory)
             self._ui_min_year = _compute_ui_min_year(self.inventory_by_id)
 
             self._mtime_key = current_key
@@ -57,7 +57,7 @@ class MetadataStore:
         return (stations_path.stat().st_mtime, inventory_path.stat().st_mtime)
 
 
-def _parse_stations(path: Path) -> Dict[str, Station]:
+def _parse_stations(file_path: Path) -> Dict[str, Station]:
     # ID(0:11) LAT(12:20) LON(21:30) NAME(41:71)
     ID_SLICE = slice(0, 11)
     LAT_SLICE = slice(12, 20)
@@ -67,8 +67,8 @@ def _parse_stations(path: Path) -> Dict[str, Station]:
     #Dict key stations_id, value Stationsobjekt
     stations: Dict[str, Station] = {}
 
-    with path.open("r", encoding="utf-8", errors="replace") as f:
-        for line in f:
+    with file_path.open("r", encoding="utf-8", errors="replace") as file_handle:
+        for line in file_handle:
             station = _parse_station_line(line, ID_SLICE, LAT_SLICE, LON_SLICE, NAME_SLICE)
             if station is None:
                 continue
@@ -77,7 +77,7 @@ def _parse_stations(path: Path) -> Dict[str, Station]:
     return stations
 
 
-def _parse_inventory(path: Path) -> Dict[str, Dict[str, Availability]]:
+def _parse_inventory(file_path: Path) -> Dict[str, Dict[str, Availability]]:
     # ID(0:11) ELEMENT(31:35) FIRSTYEAR(36:40) LASTYEAR(41:45)
     ID_SLICE = slice(0, 11)
     ELEMENT_SLICE = slice(31, 35)
@@ -88,8 +88,8 @@ def _parse_inventory(path: Path) -> Dict[str, Dict[str, Availability]]:
     # value Availability(firstYear, lastYear)
     inventory_by_station: Dict[str, Dict[str, Availability]] = {}
 
-    with path.open("r", encoding="utf-8", errors="replace") as f:
-        for line in f:
+    with file_path.open("r", encoding="utf-8", errors="replace") as file_handle:
+        for line in file_handle:
             parsed = _parse_inventory_line(
                 line, ID_SLICE, ELEMENT_SLICE, FIRSTYEAR_SLICE, LASTYEAR_SLICE
             )
@@ -97,23 +97,36 @@ def _parse_inventory(path: Path) -> Dict[str, Dict[str, Availability]]:
                 continue
             station_id, element, first_year, last_year = parsed
 
-            # 1) Station-Dict holen oder neu anlegen
-            if station_id not in inventory_by_station:
-                inventory_by_station[station_id] = {}
-
-            station_inventory = inventory_by_station[station_id]
-
-            # 2) Element setzen oder "Spanne erweitern"
-            if element not in station_inventory:
-                station_inventory[element] = Availability(firstYear=first_year, lastYear=last_year)
-            else:
-                previous = station_inventory[element]
-                station_inventory[element] = Availability(
-                    firstYear=min(previous.firstYear, first_year),
-                    lastYear=max(previous.lastYear, last_year),
-                )
+            station_inventory = _get_or_create_station_inventory(inventory_by_station, station_id)
+            _merge_availability_range(station_inventory, element, first_year, last_year)
 
     return inventory_by_station
+
+
+def _get_or_create_station_inventory(
+    inventory_by_station: Dict[str, Dict[str, Availability]],
+    station_id: str,
+) -> Dict[str, Availability]:
+    if station_id not in inventory_by_station:
+        inventory_by_station[station_id] = {}
+    return inventory_by_station[station_id]
+
+
+def _merge_availability_range(
+    station_inventory: Dict[str, Availability],
+    element: str,
+    first_year: int,
+    last_year: int,
+) -> None:
+    if element not in station_inventory:
+        station_inventory[element] = Availability(firstYear=first_year, lastYear=last_year)
+        return
+
+    previous = station_inventory[element]
+    station_inventory[element] = Availability(
+        firstYear=min(previous.firstYear, first_year),
+        lastYear=max(previous.lastYear, last_year),
+    )
 
 
 def _parse_station_line(
@@ -153,14 +166,14 @@ def _parse_inventory_line(
     return station_id, element, first_year, last_year
 
 
-def _compute_ui_min_year(inv_by_id: Dict[str, Dict[str, Availability]]) -> int:
+def _compute_ui_min_year(inventory_by_id: Dict[str, Dict[str, Availability]]) -> int:
     # Ohne Optional/None: wir starten mit "sehr groß" und merken uns, ob wir etwas gefunden haben
     found_tmin = False
     found_tmax = False
     min_tmin = 10**9
     min_tmax = 10**9
 
-    for station_inventory in inv_by_id.values():
+    for station_inventory in inventory_by_id.values():
         if "TMIN" in station_inventory:
             found_tmin = True
             min_tmin = min(min_tmin, station_inventory["TMIN"].firstYear)

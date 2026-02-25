@@ -1,8 +1,11 @@
+from typing import Dict, List, Literal, Optional
+
 from pydantic import BaseModel
-from typing import Dict, List, Optional, Literal
+
 
 class HealthResponse(BaseModel):
     status: str
+
 
 class UiLimits(BaseModel):
     minYear: int
@@ -12,12 +15,15 @@ class UiLimits(BaseModel):
     limitMin: int = 1
     limitMax: int = 10
 
+
 class MetaResponse(BaseModel):
     ui: UiLimits
+
 
 class StationAvailability(BaseModel):
     firstYear: int
     lastYear: int
+
 
 class StationResult(BaseModel):
     stationId: str
@@ -27,12 +33,15 @@ class StationResult(BaseModel):
     distanceKm: float
     availability: Optional[StationAvailability] = None  # <- vereinheitlicht
 
+
 class StationsNearbyResponse(BaseModel):
     results: List[StationResult]
+
 
 PeriodKey = Literal["YEAR", "SPRING", "SUMMER", "AUTUMN", "WINTER"]
 ElementKey = Literal["TMIN", "TMAX"]
 SeriesKey = str  # "<PERIOD>_<ELEMENT>"
+
 
 class StationTemperatureSeriesResponse(BaseModel):
     stationId: str

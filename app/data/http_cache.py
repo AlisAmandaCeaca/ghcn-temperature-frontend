@@ -28,34 +28,29 @@ class HttpCache:
           - False = Cache Hit (Datei war vorhanden und noch "frisch")
         """
 
-        # Zielordner sicherstellen (z.B. /cache/meta oder /cache/stations/by_station)
-        dest.parent.mkdir(parents=True, exist_ok=True)
+        self._ensure_parent_dir(dest)
 
-        # 1) Cache-Prüfung: existiert die Datei und ist sie innerhalb der TTL?
-        #    Wenn ja => sofort raus (kein Netzwerk, keine Arbeit)
-        if self._is_cache_hit(dest, max_age_seconds):
+        if self._should_use_cache(dest, max_age_seconds):
             return False
 
-        # 2) Wir laden neu. Wichtig: Wir schreiben NIE direkt nach "dest",
-        #    sondern immer erst in eine Temp-Datei und ersetzen dann atomar.
-        #
-        #    Warum? Damit niemals eine "halb geschriebene" Datei existiert,
-        #    falls der Download unterbrochen wird oder parallel jemand liest.
-        temp_dir, temp_file = self._create_temp_file(dest)
+        temp_dir, temp_file = self._create_temp_target(dest)
 
         try:
-            # 3) Download in Temp-Datei (kann fehlschlagen; dest bleibt dabei unangetastet)
             self._download(url, temp_file)
 
-            # 4) Atomarer Austausch:
-            #    Entweder existiert die alte dest-Datei ODER schon die neue.
-            #    Es gibt keinen Zwischenzustand "halb neu".
             self._replace_atomic(temp_file, dest)
 
             return True
         finally:
-            # 5) Aufräumen: Temp-Ordner löschen (egal ob Erfolg oder Fehler)
             self._cleanup_temp_dir(temp_dir)
+
+    @staticmethod
+    def _ensure_parent_dir(dest: Path) -> None:
+        # Zielordner sicherstellen (z.B. /cache/meta oder /cache/stations/by_station)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+
+    def _should_use_cache(self, dest: Path, max_age_seconds: int | None) -> bool:
+        return self._is_cache_hit(dest, max_age_seconds)
 
     def _is_cache_hit(self, dest: Path, max_age_seconds: int | None) -> bool:
         """
@@ -102,7 +97,7 @@ class HttpCache:
                             file_handle.write(chunk)
 
     @staticmethod
-    def _create_temp_file(dest: Path) -> tuple[Path, Path]:
+    def _create_temp_target(dest: Path) -> tuple[Path, Path]:
         temp_dir = Path(tempfile.mkdtemp(prefix="dl_", dir=str(dest.parent)))
         temp_file = temp_dir / (dest.name + ".tmp")
         return temp_dir, temp_file
