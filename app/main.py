@@ -3,7 +3,6 @@ from pathlib import Path
 import logging
 
 from app.config import settings
-from app.util.timing import RequestTimingMiddleware
 
 from app.data.http_cache import HttpCache
 from app.data.noaa_metadata_files import NoaaMetadataFiles
@@ -44,8 +43,6 @@ def create_app() -> FastAPI:
     app.state.metadata_store = metadata_store
     app.state.station_search = station_search
     app.state.series_service = series_service
-
-    app.add_middleware(RequestTimingMiddleware)
 
     from app.api.routes import router
 
