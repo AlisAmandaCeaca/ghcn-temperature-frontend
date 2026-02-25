@@ -32,44 +32,52 @@ class TemperatureSeriesService:
         if station_id not in self.metadata.stations_by_id:
             raise StationNotFoundError(f"Station '{station_id}' not found")
 
+        years, series = self._initialize_series(start_year, end_year)
+        station = self.metadata.stations_by_id[station_id]
+        is_southern = float(station.lat) < 0
+
+        data_path = self.station_files.ensure_station_gz(station_id)
+        df = self._load_and_filter_data(data_path, station_id, ignore_qflag, start_year, end_year, is_southern)
+        
+        if df.empty:
+            return years, series
+
+        aggregated_data = self._aggregate_data(df, start_year, end_year)
+        self._fill_series(series, years, aggregated_data)
+        return years, series
+
+    def _initialize_series(self, start_year: int, end_year: int) -> Tuple[List[int], Dict[str, List[Optional[float]]]]:
         years = list(range(start_year, end_year + 1))
         series = _empty_series(years)
+        return years, series
 
-        st = self.metadata.stations_by_id[station_id]
-        is_southern = float(st.lat) < 0
-
-        gz_path = self.station_files.ensure_station_gz(station_id)
-
-        # chunked read + frühes Filtering (DATE, ID, ELEMENT, missing, QFLAG)
+    def _load_and_filter_data(self, data_path: Path, station_id: str, ignore_qflag: bool, start_year: int, end_year: int, is_southern: bool) -> pd.DataFrame:
         df = _load_daily_df(
-            gz_path=gz_path,
+            gz_path=data_path,
             station_id=station_id,
             ignore_qflag=ignore_qflag,
             start_year=start_year,
             end_year=end_year,
         )
         if df.empty:
-            return years, series
+            return df
 
         df = _add_time_cols(df)
-
-        # YEAR + SEASONS (vektorisiert)
         df = _add_period_views(df, is_southern)
-
-        # Period-year range (safety)
         df = df[(df["periodYear"] >= start_year) & (df["periodYear"] <= end_year)]
-        if df.empty:
-            return years, series
+        return df
 
+    def _aggregate_data(self, df: pd.DataFrame, start_year: int, end_year: int) -> pd.DataFrame:
         table = (
             df.groupby(["periodYear", "period", "ELEMENT"])["valueC"]
             .mean()
             .unstack("ELEMENT")
             .reset_index()
         )
+        return table
 
+    def _fill_series(self, series: Dict[str, List[Optional[float]]], years: List[int], table: pd.DataFrame) -> None:
         _fill_series(series, years, table)
-        return years, series
 
 
 def _load_daily_df(

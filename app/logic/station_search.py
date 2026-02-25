@@ -42,11 +42,11 @@ class StationSearchService:
         min_lat, max_lat, min_lon, max_lon = bounding_box(lat, lon, radius_km)
         candidates: List[StationCandidate] = []
 
-        for st in self.metadata.stations_by_id.values():
-            if not (min_lat <= st.lat <= max_lat and min_lon <= st.lon <= max_lon):
+        for station in self.metadata.stations_by_id.values():
+            if not (min_lat <= station.lat <= max_lat and min_lon <= station.lon <= max_lon):
                 continue
 
-            dist = haversine_km(lat, lon, st.lat, st.lon)
+            dist = haversine_km(lat, lon, station.lat, station.lon)
             if dist > radius_km:
                 continue
 

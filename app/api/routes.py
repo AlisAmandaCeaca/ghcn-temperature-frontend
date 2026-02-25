@@ -60,19 +60,19 @@ async def stations_nearby(
         raise HTTPException(status_code=503, detail=f"Service temporarily unavailable: {str(e)}")
 
     results = []
-    for c in candidates:
+    for candidate in candidates:
         availability = StationAvailability(
-            firstYear=c.availability.firstYear,
-            lastYear=c.availability.lastYear,
+            firstYear=candidate.availability.firstYear,
+            lastYear=candidate.availability.lastYear,
         )
 
         results.append(
             StationResult(
-                stationId=c.stationId,
-                name=c.name,
-                lat=c.lat,
-                lon=c.lon,
-                distanceKm=c.distanceKm,
+                stationId=candidate.stationId,
+                name=candidate.name,
+                lat=candidate.lat,
+                lon=candidate.lon,
+                distanceKm=candidate.distanceKm,
                 availability=availability,
             )
         )
