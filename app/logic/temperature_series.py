@@ -261,5 +261,3 @@ def _compute_period_years_for_boundary_season(
     jan_feb_boundary_mask = season_df["month"].isin([1, 2]) & (season_df["period"] == boundary_season)
     period_years.loc[jan_feb_boundary_mask] = period_years.loc[jan_feb_boundary_mask] - 1
     return period_years
-
-

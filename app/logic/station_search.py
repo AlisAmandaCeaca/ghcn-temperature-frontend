@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List
 from operator import attrgetter
 
-from app.logic.geo import bounding_box, haversine_km
+from app.logic.geo_calculations import bounding_box, haversine_km
 from app.logic.station_metadata_store import Availability, Station, StationMetadataStore
 
 

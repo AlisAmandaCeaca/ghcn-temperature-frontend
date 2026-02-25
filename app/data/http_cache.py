@@ -34,9 +34,6 @@ class HttpCache:
         finally:
             self._cleanup_temp_dir(temp_dir)
 
-    def get_to_file(self, url: str, dest: Path, *, max_age_seconds: int | None = None) -> bool:
-        return self.fetch_to_file(url, dest, ttl_seconds=max_age_seconds)
-
     @staticmethod
     def _ensure_parent_dir(target_path: Path) -> None:
         # Zielordner sicherstellen (z.B. /cache/meta oder /cache/stations/by_station)
