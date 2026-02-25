@@ -97,7 +97,11 @@ class NoaaStationFiles:
         # Rekonstruktion: sortiere nach mtime (älteste zuerst)
         files = [p for p in station_cache_dir.glob("*.csv.gz") if p.is_file()]
         files.sort(key=lambda p: p.stat().st_mtime)
-        return [p.stem for p in files]  # stem = station_id
+        return [
+            p.name[:-len(".csv.gz")]
+            for p in files
+            if p.name.endswith(".csv.gz")
+        ]
 
     # -----------------------
     # LRU-ähnlich: "zuletzt genutzt" ans Ende schieben

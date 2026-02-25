@@ -6,7 +6,7 @@ import threading
 
 from app.data.noaa_metadata_files import NoaaMetadataFiles
 from app.models.station import Station, Availability
-from app.logic.exceptions import DataUnavailableError
+from app.exceptions import DataUnavailableError
 
 
 class MetadataStore:

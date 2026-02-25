@@ -1,4 +1,4 @@
-"""Domain and data-layer exceptions for temperature logic."""
+"""Central custom exceptions for the application."""
 
 
 class StationNotFoundError(Exception):
@@ -7,3 +7,7 @@ class StationNotFoundError(Exception):
 
 class DataUnavailableError(Exception):
     """Raised when required data (e.g., metadata or station files) is not available."""
+
+
+class InvalidYearRangeError(Exception):
+    """Raised when the provided year range is invalid."""

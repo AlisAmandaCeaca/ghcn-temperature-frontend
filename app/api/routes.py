@@ -8,7 +8,7 @@ from app.api.schemas import (
     StationsNearbyResponse,
     StationTemperatureSeriesResponse,
 )
-from app.logic.exceptions import StationNotFoundError
+from app.exceptions import StationNotFoundError
 from app.api.helpers import (
     run_in_thread_or_raise_http_503,
     to_station_result,
@@ -31,8 +31,8 @@ async def meta(request: Request):
 @router.get("/stations/nearby", response_model=StationsNearbyResponse)
 async def stations_nearby(
     request: Request,
-    lat: float,
-    lon: float,
+    lat: float = Query(..., ge=-90, le=90),
+    lon: float = Query(..., ge=-180, le=180),
     radiusKm: int = Query(50, ge=1, le=100),
     limit: int = Query(10, ge=1, le=10),
     startYear: int = Query(...),

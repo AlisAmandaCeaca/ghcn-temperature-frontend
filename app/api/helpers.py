@@ -1,13 +1,27 @@
-from fastapi import HTTPException, Request
-from datetime import date
 import asyncio
+from datetime import date
 from typing import Any, Callable
 
-from app.api.validation import validate_year_range
+from fastapi import HTTPException, Request
+
 from app.api.schemas import StationAvailability, StationResult
-from app.api.exceptions import InvalidYearRangeError
-from app.logic.exceptions import DataUnavailableError
+from app.exceptions import DataUnavailableError, InvalidYearRangeError
 from app.logic.station_search import StationCandidate
+
+
+def validate_year_range(start_year: int, end_year: int, *, min_year: int, max_year: int) -> None:
+    if start_year > end_year:
+        raise InvalidYearRangeError(
+            f"Invalid year range: startYear ({start_year}) must be <= endYear ({end_year})."
+        )
+    if end_year > max_year:
+        raise InvalidYearRangeError(
+            f"Invalid endYear ({end_year}). Max allowed is {max_year} (previous year)."
+        )
+    if start_year < min_year:
+        raise InvalidYearRangeError(
+            f"Invalid startYear ({start_year}). Min allowed is {min_year} (derived from data)."
+        )
 
 
 async def validate_years_or_raise_http_400(request: Request, start_year: int, end_year: int) -> None:
@@ -37,7 +51,9 @@ def to_station_result(candidate: StationCandidate) -> StationResult:
     )
 
 
-async def run_in_thread_or_raise_http_503(func: Callable[..., Any], *args, **kwargs):
+async def run_in_thread_or_raise_http_503(
+    func: Callable[..., Any], *args, **kwargs
+) -> Any:
     try:
         return await asyncio.to_thread(func, *args, **kwargs)
     except DataUnavailableError as e:
