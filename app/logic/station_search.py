@@ -41,7 +41,9 @@ class StationSearchService:
         candidates: List[StationCandidate] = []
 
         for station in self.metadata.stations_by_id.values():
-            if not (min_lat <= station.lat <= max_lat and min_lon <= station.lon <= max_lon):
+            is_within_lat = min_lat <= station.lat <= max_lat
+            is_within_lon = min_lon <= station.lon <= max_lon
+            if not is_within_lat or not is_within_lon:
                 continue
 
             distance_km = haversine_km(lat, lon, station.lat, station.lon)
