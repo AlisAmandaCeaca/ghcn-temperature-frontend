@@ -50,7 +50,7 @@ class StationSearchService:
             if dist > radius_km:
                 continue
 
-            inv = self.metadata.inventory_by_id.get(st.stationId, {})
+            inv = self.metadata.inventory_by_id.get(station.stationId, {})
 
             # Muss TMIN und TMAX haben und beide müssen den Zeitraum abdecken
             tmin = inv.get("TMIN")
@@ -72,10 +72,10 @@ class StationSearchService:
 
             candidates.append(
                 StationCandidate(
-                    stationId=st.stationId,
-                    name=st.name,
-                    lat=st.lat,
-                    lon=st.lon,
+                    stationId=station.stationId,
+                    name=station.name,
+                    lat=station.lat,
+                    lon=station.lon,
                     distanceKm=round(dist, 3),
                     availability=Availability(firstYear=first_year, lastYear=last_year),
                 )
