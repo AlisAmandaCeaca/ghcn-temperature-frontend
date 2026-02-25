@@ -9,6 +9,7 @@ import pandas as pd
 from app.logic.metadata_store import MetadataStore
 from app.data.noaa_station_files import NoaaStationFiles
 from app.constants.temperature_constants import ELEMENTS, PERIODS
+from app.exceptions.station import StationNotFoundError
 
 # by_station has no header:
 # 0 ID, 1 DATE(YYYYMMDD), 2 ELEMENT, 3 DATA_VALUE, 4 MFLAG, 5 QFLAG, 6 SFLAG, 7 OBS_TIME
@@ -29,7 +30,7 @@ class TemperatureSeriesService:
     ) -> Tuple[List[int], Dict[str, List[Optional[float]]]]:
         self.metadata.ensure_loaded()
         if station_id not in self.metadata.stations_by_id:
-            raise KeyError("station_not_found")
+            raise StationNotFoundError(f"Station '{station_id}' not found")
 
         years = list(range(start_year, end_year + 1))
         series = _empty_series(years)

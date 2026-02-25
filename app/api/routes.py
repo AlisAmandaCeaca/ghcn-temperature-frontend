@@ -11,6 +11,8 @@ from app.api.schemas import (
     StationTemperatureSeriesResponse,
 )
 from app.api.validation import validate_year_range
+from app.exceptions.station import StationNotFoundError
+from app.exceptions.validation import InvalidYearRangeError
 
 router = APIRouter(prefix="/api")
 
@@ -41,7 +43,10 @@ def stations_nearby(
 
     min_year = metadata_store.ui_min_year()
     max_year = date.today().year - 1
-    validate_year_range(startYear, endYear, min_year=min_year, max_year=max_year)
+    try:
+        validate_year_range(startYear, endYear, min_year=min_year, max_year=max_year)
+    except InvalidYearRangeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     candidates = station_search.find_nearby(
         lat=lat,
@@ -85,7 +90,10 @@ def station_series(
 
     min_year = metadata_store.ui_min_year()
     max_year = date.today().year - 1
-    validate_year_range(startYear, endYear, min_year=min_year, max_year=max_year)
+    try:
+        validate_year_range(startYear, endYear, min_year=min_year, max_year=max_year)
+    except InvalidYearRangeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     try:
         years, series = series_service.compute_temperature_series(
@@ -94,7 +102,7 @@ def station_series(
             end_year=endYear,
             ignore_qflag=True,
         )
-    except KeyError:
+    except StationNotFoundError:
         raise HTTPException(status_code=404, detail=f"Station '{stationId}' not found.")
 
     return StationTemperatureSeriesResponse(
