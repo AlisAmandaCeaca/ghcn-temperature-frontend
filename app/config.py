@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 # Standard-TTLs für den Cache (in Sekunden)
 METADATA_TTL_SEC_DEFAULT: int = 7 * 24 * 3600
-STATION_TTL_SEC_DEFAULT: int = 30 * 24 * 3600
+STATION_TTL_SEC_DEFAULT: int =  1 * 24 * 3600
 
 # HTTP-Timeout in Sekunden
 HTTP_TIMEOUT_SEC_DEFAULT: int = 60

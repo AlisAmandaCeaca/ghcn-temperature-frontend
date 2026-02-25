@@ -39,7 +39,7 @@ class NoaaStationFiles:
         station_path = self._station_path(station_cache_dir, station_id)
         station_url = self._station_url(station_id)
 
-        self.http.get_to_file(station_url, station_path, max_age_seconds=self.station_ttl_seconds)
+        self.http.fetch_to_file(station_url, station_path, ttl_seconds=self.station_ttl_seconds)
 
         # Cache-Limit anwenden (auch wenn nur "genutzt", nicht nur "heruntergeladen")
         if self.cache_limit > 0:

@@ -48,4 +48,4 @@ class NoaaMetadataFiles:
     ) -> None:
         if require_exists and dest_path.exists():
             return
-        self.http.get_to_file(url, dest_path, max_age_seconds=max_age_seconds)
+        self.http.fetch_to_file(url, dest_path, ttl_seconds=max_age_seconds)
