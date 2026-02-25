@@ -5,7 +5,8 @@ from typing import Any, Callable
 
 from app.api.validation import validate_year_range
 from app.api.schemas import StationAvailability, StationResult
-from app.core.exceptions import DataUnavailableError, InvalidYearRangeError
+from app.api.exceptions import InvalidYearRangeError
+from app.logic.exceptions import DataUnavailableError
 from app.logic.station_search import StationCandidate
 
 

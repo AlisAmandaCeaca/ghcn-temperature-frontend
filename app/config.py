@@ -2,12 +2,15 @@ import os
 
 from pydantic import BaseModel
 
-from app.core.config_defaults import (
-    CACHE_DIR_DEFAULT,
-    META_DATA_TTL_SEC_DEFAULT,
-    STATION_TTL_SEC_DEFAULT,
-    HTTP_TIMEOUT_SEC_DEFAULT,
-)
+# Cache TTL in seconds
+META_DATA_TTL_SEC_DEFAULT: int = 7 * 24 * 3600
+STATION_TTL_SEC_DEFAULT: int = 30 * 24 * 3600
+
+# HTTP timeout in seconds
+HTTP_TIMEOUT_SEC_DEFAULT: int = 60
+
+# Cache directory default
+CACHE_DIR_DEFAULT: str = "/cache"
 
 class Settings(BaseModel):
     # ENV wird aus dem Container gelesen; sonst gelten Defaults.

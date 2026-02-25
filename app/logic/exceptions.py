@@ -1,12 +1,8 @@
-"""Custom exceptions for the GHCN Temperature API."""
+"""Domain and data-layer exceptions for temperature logic."""
 
 
 class StationNotFoundError(Exception):
     """Raised when a requested station is not found in the metadata."""
-
-
-class InvalidYearRangeError(Exception):
-    """Raised when the provided year range is invalid."""
 
 
 class DataUnavailableError(Exception):

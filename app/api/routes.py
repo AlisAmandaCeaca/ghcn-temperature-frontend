@@ -8,7 +8,7 @@ from app.api.schemas import (
     StationsNearbyResponse,
     StationTemperatureSeriesResponse,
 )
-from app.core.exceptions import StationNotFoundError
+from app.logic.exceptions import StationNotFoundError
 from app.api.helpers import (
     run_in_thread_or_raise_http_503,
     to_station_result,
