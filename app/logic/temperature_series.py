@@ -11,7 +11,7 @@ from app.data.noaa_station_files import NoaaStationFiles
 from app.logic.constants import ELEMENTS, PERIODS
 from app.exceptions import StationNotFoundError
 
-# by_station has no header:
+# by_station hat keine Header-Zeile:
 # 0 ID, 1 DATE(YYYYMMDD), 2 ELEMENT, 3 DATA_VALUE, 4 MFLAG, 5 QFLAG, 6 SFLAG, 7 OBS_TIME
 DAILY_DATA_COLUMNS = ["ID", "DATE", "ELEMENT", "VALUE", "MFLAG", "QFLAG", "SFLAG", "OBS_TIME"]
 
@@ -206,12 +206,12 @@ def _add_period_views(daily_df: pd.DataFrame, is_southern: bool) -> pd.DataFrame
            Beispiel Nord: Winter 2025 = Dez 2025 + Jan/Feb 2026
            => Jan/Feb der boundary-season zählen ins Vorjahr
     """
-    # YEAR view
+    # Ansicht für Gesamtjahr
     year_view = daily_df.copy()
     year_view["period"] = "YEAR"
     year_view["periodYear"] = year_view["year"]
 
-    # SEASON view (vektorisiert)
+    # Ansicht für Jahreszeiten (vektorisiert)
     season_view = daily_df.copy()
     month_series = season_view["month"]
 
@@ -219,9 +219,9 @@ def _add_period_views(daily_df: pd.DataFrame, is_southern: bool) -> pd.DataFrame
 
     if is_southern:
         season_labels = _map_southern_hemisphere_seasons(season_labels)
-        boundary_season = "SUMMER"  # südliche Hemisphäre: Sommer ist Dec-Feb
+        boundary_season = "SUMMER"  # südliche Hemisphäre: Sommer ist Dez-Feb
     else:
-        boundary_season = "WINTER"  # nördliche Hemisphäre: Winter ist Dec-Feb
+        boundary_season = "WINTER"  # nördliche Hemisphäre: Winter ist Dez-Feb
 
     season_view["period"] = season_labels
 

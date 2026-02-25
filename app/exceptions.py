@@ -1,13 +1,13 @@
-"""Central custom exceptions for the application."""
+"""Zentrale anwendungsspezifische Exceptions."""
 
 
 class StationNotFoundError(Exception):
-    """Raised when a requested station is not found in the metadata."""
+    """Wird ausgelöst, wenn eine angefragte Station in den Metadaten fehlt."""
 
 
 class DataUnavailableError(Exception):
-    """Raised when required data (e.g., metadata or station files) is not available."""
+    """Wird ausgelöst, wenn benötigte Daten (z. B. Metadaten oder Stationsdateien) fehlen."""
 
 
 class InvalidYearRangeError(Exception):
-    """Raised when the provided year range is invalid."""
+    """Wird ausgelöst, wenn der angegebene Jahresbereich ungültig ist."""

@@ -1,7 +1,7 @@
 from typing import Tuple
 
-# Temperature elements supported by the API
+# Von der API unterstützte Temperaturelemente
 ELEMENTS: Tuple[str, str] = ("TMIN", "TMAX")
 
-# Periods for temperature series
+# Zeitabschnitte für Temperaturreihen
 PERIODS: Tuple[str, str, str, str, str] = ("YEAR", "SPRING", "SUMMER", "AUTUMN", "WINTER")

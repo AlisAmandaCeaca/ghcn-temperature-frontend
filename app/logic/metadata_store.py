@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Dict, Tuple
 import threading
 
+import httpx
+
 from app.data.noaa_metadata_files import NoaaMetadataFiles
 from app.exceptions import DataUnavailableError
 
@@ -63,7 +65,7 @@ class MetadataStore:
     def _ensure_paths(self):
         try:
             return self.files.ensure()
-        except Exception as e:
+        except (OSError, httpx.HTTPError) as e:
             raise DataUnavailableError(f"Failed to load metadata files: {str(e)}")
 
     @staticmethod
@@ -78,7 +80,7 @@ def _parse_stations(file_path: Path) -> Dict[str, Station]:
     LON_SLICE = slice(21, 30)
     NAME_SLICE = slice(41, 71)
 
-    #Dict key stations_id, value Stationsobjekt
+    # Dictionary: Schlüssel = station_id, Wert = Stationsobjekt
     stations: Dict[str, Station] = {}
 
     with file_path.open("r", encoding="utf-8", errors="replace") as file_handle:
@@ -98,8 +100,8 @@ def _parse_inventory(file_path: Path) -> Dict[str, Dict[str, Availability]]:
     FIRSTYEAR_SLICE = slice(36, 40)
     LASTYEAR_SLICE = slice(41, 45)
 
-    #Dict key stations_id, value Dict mit key Element (TMIN/TMAX) und 
-    # value Availability(firstYear, lastYear)
+    # Dictionary: Schlüssel = station_id, Wert = Dictionary mit
+    # Schlüssel Element (TMIN/TMAX) und Wert Availability(firstYear, lastYear)
     inventory_by_station: Dict[str, Dict[str, Availability]] = {}
 
     with file_path.open("r", encoding="utf-8", errors="replace") as file_handle:

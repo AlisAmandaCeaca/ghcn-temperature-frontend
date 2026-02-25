@@ -31,7 +31,7 @@ class StationResult(BaseModel):
     lat: float
     lon: float
     distanceKm: float
-    availability: Optional[StationAvailability] = None  # <- vereinheitlicht
+    availability: Optional[StationAvailability] = None  # <- einheitlich
 
 
 class StationsNearbyResponse(BaseModel):
@@ -40,7 +40,7 @@ class StationsNearbyResponse(BaseModel):
 
 PeriodKey = Literal["YEAR", "SPRING", "SUMMER", "AUTUMN", "WINTER"]
 ElementKey = Literal["TMIN", "TMAX"]
-SeriesKey = str  # "<PERIOD>_<ELEMENT>"
+SeriesKey = str  # Muster: "<PERIOD>_<ELEMENT>"
 
 
 class StationTemperatureSeriesResponse(BaseModel):

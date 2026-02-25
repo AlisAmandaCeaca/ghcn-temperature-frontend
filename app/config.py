@@ -2,22 +2,25 @@ import os
 
 from pydantic import BaseModel
 
-# Cache TTL in seconds
-META_DATA_TTL_SEC_DEFAULT: int = 7 * 24 * 3600
+# Standard-TTLs für den Cache (in Sekunden)
+METADATA_TTL_SEC_DEFAULT: int = 7 * 24 * 3600
 STATION_TTL_SEC_DEFAULT: int = 30 * 24 * 3600
 
-# HTTP timeout in seconds
+# HTTP-Timeout in Sekunden
 HTTP_TIMEOUT_SEC_DEFAULT: int = 60
 
-# Cache directory default
+# Standard-Verzeichnis für den Cache
 CACHE_DIR_DEFAULT: str = "/cache"
 
 class Settings(BaseModel):
-    # ENV wird aus dem Container gelesen; sonst gelten Defaults.
+    # ENV wird aus dem Container gelesen; sonst gelten Standardwerte.
     cache_dir: str = os.getenv("CACHE_DIR", CACHE_DIR_DEFAULT)
 
-    meta_data_ttl_sec: int = int(
-        os.getenv("META_DATA_TTL_SEC", str(META_DATA_TTL_SEC_DEFAULT))
+    metadata_ttl_sec: int = int(
+        os.getenv(
+            "METADATA_TTL_SEC",
+            os.getenv("META_DATA_TTL_SEC", str(METADATA_TTL_SEC_DEFAULT)),
+        )
     )
     station_ttl_sec: int = int(
         os.getenv("STATION_TTL_SEC", str(STATION_TTL_SEC_DEFAULT))

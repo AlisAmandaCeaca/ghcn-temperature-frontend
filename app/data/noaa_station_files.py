@@ -41,7 +41,7 @@ class NoaaStationFiles:
 
         self.http.get_to_file(station_url, station_path, max_age_seconds=self.station_ttl_seconds)
 
-        # Cachelimit anwenden (auch wenn nur "genutzt", nicht nur "downloaded")
+        # Cache-Limit anwenden (auch wenn nur "genutzt", nicht nur "heruntergeladen")
         if self.cache_limit > 0:
             self._update_cache_state(station_cache_dir, station_id)
 
@@ -66,14 +66,14 @@ class NoaaStationFiles:
             self._save_state(cache_state, station_cache_dir)
 
     # -----------------------
-    # State Handling (persistiert im Volume)
+    # Statusverwaltung (persistiert im Volume)
     # -----------------------
 
     def _load_state(self, station_cache_dir: Path) -> StationCacheState:
         station_cache_dir.mkdir(parents=True, exist_ok=True)
 
         if not self._state_path.exists():
-            # Wenn kein state vorhanden ist: aus Dateien "best effort" rekonstruieren
+            # Wenn kein Status vorhanden ist: aus Dateien bestmöglich rekonstruieren
             order = self._rebuild_order_from_files(station_cache_dir)
             return StationCacheState(order=order)
 
@@ -85,7 +85,7 @@ class NoaaStationFiles:
             # nur strings behalten
             station_order = [x for x in station_order if isinstance(x, str) and x]
             return StationCacheState(order=station_order)
-        except Exception:
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
             order = self._rebuild_order_from_files(station_cache_dir)
             return StationCacheState(order=order)
 
@@ -119,6 +119,6 @@ class NoaaStationFiles:
             try:
                 if file_path.exists():
                     file_path.unlink()
-            except Exception:
-                # Wenn löschen nicht klappt, ignorieren – state ist trotzdem aktualisiert
+            except OSError:
+                # Wenn Löschen fehlschlägt, ignorieren – Status ist trotzdem aktualisiert
                 pass

@@ -16,7 +16,7 @@ from app.logic.temperature_series import TemperatureSeriesService
 def create_app() -> FastAPI:
     app = FastAPI(title="GHCN Temperature API")
 
-    # logging basic (optional)
+    # Einfaches Basis-Logging konfigurieren
     logging.basicConfig(level=logging.WARNING)
 
     http_cache = HttpCache(timeout_sec=settings.http_timeout_sec)
@@ -26,7 +26,7 @@ def create_app() -> FastAPI:
     metadata_files = NoaaMetadataFiles(
         http=http_cache,
         cache_dir=cache_dir,
-        meta_ttl_seconds=settings.meta_data_ttl_sec,
+        meta_ttl_seconds=settings.metadata_ttl_sec,
     )
     station_files = NoaaStationFiles(
         http=http_cache,
@@ -50,7 +50,7 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     def warmup_metadata() -> None:
-        # Warmup: Metadaten laden/parsen
+        # Beim Start Metadaten laden und parsen
         metadata_store.ensure_loaded()
 
     return app
