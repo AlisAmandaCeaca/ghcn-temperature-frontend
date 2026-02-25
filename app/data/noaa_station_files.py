@@ -11,7 +11,7 @@ AWS_BASE = "https://noaa-ghcn-pds.s3.amazonaws.com"
 BY_STATION_URL = f"{AWS_BASE}/csv.gz/by_station/{{station_id}}.csv.gz"
 
 
-class NoaaStationFiles:
+class NoaaStationFileStore:
     def __init__(
         self,
         http: HttpCache,
@@ -28,7 +28,7 @@ class NoaaStationFiles:
         self._lock = threading.Lock()
         self._state_path = self.cache_dir / "stations" / "by_station" / "state.json"
 
-    def ensure_station_gz(self, station_id: str) -> Path:
+    def ensure_station_file(self, station_id: str) -> Path:
         station_cache_dir = self._station_dir()
         station_path = self._station_path(station_cache_dir, station_id)
         station_url = self._station_url(station_id)

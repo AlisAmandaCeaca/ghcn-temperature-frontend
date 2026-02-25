@@ -25,7 +25,7 @@ class Availability:
     lastYear: int
 
 
-class MetadataStore:
+class StationMetadataStore:
     def __init__(self, files: NoaaMetadataFiles):
         self.files = files
         self._lock = threading.Lock()

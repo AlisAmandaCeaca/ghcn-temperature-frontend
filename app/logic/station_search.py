@@ -1,10 +1,10 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 from operator import attrgetter
 
 from app.logic.geo import bounding_box, haversine_km
-from app.logic.metadata_store import Availability, MetadataStore, Station
+from app.logic.station_metadata_store import Availability, Station, StationMetadataStore
 
 
 @dataclass(frozen=True)
@@ -22,7 +22,7 @@ def _covers_year_range(first_year: int, last_year: int, start_year: int, end_yea
 
 
 class StationSearchService:
-    def __init__(self, metadata: MetadataStore):
+    def __init__(self, metadata: StationMetadataStore):
         self.metadata = metadata
 
     def find_nearby(
@@ -41,11 +41,11 @@ class StationSearchService:
         candidates: List[StationCandidate] = []
 
         for station in self.metadata.stations_by_id.values():
-            if not self._is_within_bbox(station, min_lat, max_lat, min_lon, max_lon):
+            if not (min_lat <= station.lat <= max_lat and min_lon <= station.lon <= max_lon):
                 continue
 
-            distance_km = self._distance_km(lat, lon, station)
-            if not self._is_within_radius(distance_km, radius_km):
+            distance_km = haversine_km(lat, lon, station.lat, station.lon)
+            if distance_km > radius_km:
                 continue
 
             availability = self._get_overlap_availability(
@@ -70,24 +70,12 @@ class StationSearchService:
         candidates.sort(key=attrgetter("distanceKm"))
         return candidates[:limit]
 
-    @staticmethod
-    def _is_within_bbox(station: Station, min_lat: float, max_lat: float, min_lon: float, max_lon: float) -> bool:
-        return min_lat <= station.lat <= max_lat and min_lon <= station.lon <= max_lon
-
-    @staticmethod
-    def _distance_km(lat: float, lon: float, station: Station) -> float:
-        return haversine_km(lat, lon, station.lat, station.lon)
-
-    @staticmethod
-    def _is_within_radius(distance_km: float, radius_km: int) -> bool:
-        return distance_km <= radius_km
-
     def _get_overlap_availability(
         self,
         station_id: str,
         start_year: int,
         end_year: int,
-    ) -> Optional[Availability]:
+    ) -> Availability | None:
         station_inventory = self.metadata.inventory_by_id.get(station_id, {})
 
         tmin_availability = station_inventory.get("TMIN")

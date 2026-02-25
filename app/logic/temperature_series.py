@@ -6,8 +6,8 @@ from typing import Callable, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from app.logic.metadata_store import MetadataStore
-from app.data.noaa_station_files import NoaaStationFiles
+from app.logic.station_metadata_store import StationMetadataStore
+from app.data.noaa_station_files import NoaaStationFileStore
 from app.logic.constants import ELEMENTS, PERIODS
 from app.exceptions import StationNotFoundError
 
@@ -21,8 +21,8 @@ DailyDfLoader = Callable[[Path, str, bool, int, int], pd.DataFrame]
 class TemperatureSeriesService:
     def __init__(
         self,
-        metadata: MetadataStore,
-        station_files: NoaaStationFiles,
+        metadata: StationMetadataStore,
+        station_files: NoaaStationFileStore,
         daily_df_loader: DailyDfLoader | None = None,
     ):
         self.metadata = metadata
@@ -44,7 +44,7 @@ class TemperatureSeriesService:
         station = self.metadata.stations_by_id[station_id]
         is_southern = float(station.lat) < 0
 
-        station_path = self.station_files.ensure_station_gz(station_id)
+        station_path = self.station_files.ensure_station_file(station_id)
         period_df = self._load_and_filter_data(
             station_path,
             station_id,
