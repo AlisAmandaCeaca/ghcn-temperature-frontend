@@ -1,4 +1,4 @@
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -27,20 +27,15 @@ class StationAvailability(BaseModel):
 
 class StationResult(BaseModel):
     stationId: str
-    name: Optional[str] = None
+    name: str
     lat: float
     lon: float
     distanceKm: float
-    availability: Optional[StationAvailability] = None  # <- einheitlich
+    availability: StationAvailability
 
 
 class StationsNearbyResponse(BaseModel):
     results: List[StationResult]
-
-
-PeriodKey = Literal["YEAR", "SPRING", "SUMMER", "AUTUMN", "WINTER"]
-ElementKey = Literal["TMIN", "TMAX"]
-SeriesKey = str  # Muster: "<PERIOD>_<ELEMENT>"
 
 
 class StationTemperatureSeriesResponse(BaseModel):
@@ -48,4 +43,4 @@ class StationTemperatureSeriesResponse(BaseModel):
     startYear: int
     endYear: int
     years: List[int]
-    series: Dict[SeriesKey, List[Optional[float]]]
+    series: Dict[str, List[Optional[float]]]

@@ -10,7 +10,7 @@ from app.logic.metadata_store import Availability, MetadataStore, Station
 @dataclass(frozen=True)
 class StationCandidate:
     stationId: str
-    name: Optional[str]
+    name: str
     lat: float
     lon: float
     distanceKm: float
