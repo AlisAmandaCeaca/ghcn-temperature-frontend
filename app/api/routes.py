@@ -15,6 +15,7 @@ from app.api.validation import validate_year_range
 from app.exceptions.station import StationNotFoundError
 from app.exceptions.validation import InvalidYearRangeError
 from app.exceptions.data import DataUnavailableError
+from app.api.helpers import _validate_years
 
 router = APIRouter(prefix="/api")
 
@@ -43,12 +44,7 @@ async def stations_nearby(
     metadata_store = request.app.state.metadata_store
     station_search = request.app.state.station_search
 
-    min_year = metadata_store.ui_min_year()
-    max_year = date.today().year - 1
-    try:
-        validate_year_range(startYear, endYear, min_year=min_year, max_year=max_year)
-    except InvalidYearRangeError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    await _validate_years(request, startYear, endYear)
 
     try:
         candidates = await asyncio.to_thread(
@@ -94,12 +90,7 @@ async def station_series(
     metadata_store = request.app.state.metadata_store
     series_service = request.app.state.series_service
 
-    min_year = metadata_store.ui_min_year()
-    max_year = date.today().year - 1
-    try:
-        validate_year_range(startYear, endYear, min_year=min_year, max_year=max_year)
-    except InvalidYearRangeError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    await _validate_years(request, startYear, endYear)
 
     try:
         years, series = await asyncio.to_thread(
