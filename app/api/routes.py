@@ -9,10 +9,10 @@ from app.api.schemas import (
     StationTemperatureSeriesResponse,
 )
 from app.exceptions import StationNotFoundError
+from app.api.validation import validate_years_or_raise_http_400
 from app.api.helpers import (
     run_in_thread_or_raise_http_503,
     to_station_result,
-    validate_years_or_raise_http_400,
 )
 
 router = APIRouter(prefix="/api")
