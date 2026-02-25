@@ -10,23 +10,13 @@ import httpx
 
 
 class HttpCache:
+    # Kleiner Dateicache für HTTP-Downloads mit TTL und atomarem Ersetzen.
     def __init__(self, *, timeout_sec: int, user_agent: str = "ghcn-temperature-api"):
         self.timeout_sec = timeout_sec
         self.user_agent = user_agent
 
     def fetch_to_file(self, url: str, target_path: Path, *, ttl_seconds: int | None = None) -> bool:
-        """
-        Lädt eine URL in eine Datei (dateibasiertes Caching + atomarer Dateitausch).
-
-        - Wenn target_path existiert und ttl_seconds gesetzt ist:
-            -> TTL prüfen (Datei ist "frisch" = Cache Hit) => kein Download
-        - Wenn target_path nicht existiert oder TTL abgelaufen ist:
-            -> Download => target_path wird atomar ersetzt
-
-        Rückgabe:
-          - True  = Download wurde gemacht (Cache Miss oder abgelaufen)
-          - False = Cache Hit (Datei war vorhanden und noch "frisch")
-        """
+        # False = Cache-Treffer, True = neu heruntergeladen.
 
         self._ensure_parent_dir(target_path)
 
@@ -53,14 +43,7 @@ class HttpCache:
         target_path.parent.mkdir(parents=True, exist_ok=True)
 
     def _is_cache_hit(self, target_path: Path, ttl_seconds: int | None) -> bool:
-        """
-        Prüft, ob wir die Datei aus dem Cache verwenden können.
-
-        Regeln:
-        - Wenn ttl_seconds None ist => kein TTL-Cache aktiv => immer neu laden (False)
-        - Wenn Datei nicht existiert => Cache Miss (False)
-        - Sonst: Alter der Datei berechnen und mit TTL vergleichen
-        """
+        # Ohne TTL immer neu laden.
         # Wenn keine TTL angegeben ist, soll immer neu geladen werden.
         if ttl_seconds is None:
             return False
@@ -76,12 +59,7 @@ class HttpCache:
         return age_seconds <= ttl_seconds
 
     def _download_to_file(self, url: str, out_file: Path) -> None:
-        """
-        Streamt die URL in eine Datei (out_file).
-
-        - stream() => Download in kleinen Chunks (gut für große Dateien)
-        - raise_for_status() => bei 404/500 usw. Exception, damit wir nicht "kaputtes" cachen
-        """
+        # Download als Stream, damit auch große Dateien effizient laufen.
         with httpx.Client(
             timeout=self.timeout_sec,
             headers={"User-Agent": self.user_agent},

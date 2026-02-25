@@ -32,7 +32,7 @@ def create_app() -> FastAPI:
         http=http_cache,
         cache_dir=cache_dir,
         station_ttl_seconds=settings.station_ttl_sec,
-        cache_limit=5,
+        cache_limit=settings.station_cache_limit,
     )
     metadata_store = MetadataStore(files=metadata_files)
     station_search = StationSearchService(metadata=metadata_store)
