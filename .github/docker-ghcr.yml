@@ -27,4 +27,6 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: ghcr.io/AlisAmandaCeaca/ghcn-temperature-frontend:latest
+          tags: |
+            ghcr.io/AlisAmandaCeaca/ghcn-temperature-frontend:latest
+            ghcr.io/AlisAmandaCeaca/ghcn-temperature-frontend:${{ github.sha }}

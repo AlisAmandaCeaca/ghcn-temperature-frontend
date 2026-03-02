@@ -1,192 +1,257 @@
 <div class="container">
-  <h1>Temperaturdaten-Auswertung</h1>
-
-  <!-- Suchkarte -->
-  <div class="card search-card">
-    <h2>Standortsuche</h2>
-    <div class="form-grid">
-      <div class="form-elements">
-        <label>Breitengrad</label>
-        <input type="number" [(ngModel)]="searchParams.latitude" placeholder="z.B. 48.05" />
-      </div>
-      <div class="form-elements">
-        <label>Längengrad</label>
-        <input type="number" [(ngModel)]="searchParams.longitude" placeholder="z.B. 8.45" />
-      </div>
-      <div class="form-elements">
-        <label>Radius (km)</label>
-        <input type="number" [(ngModel)]="searchParams.radiusKm" max="50" min="1" />
-      </div>
-      <div class="form-elements">
-        <label>Max. Stationen</label>
-        <input type="number" [(ngModel)]="searchParams.limit" max="5" min="1" />
-      </div>
-      <div class="form-elements">
-        <label>Startjahr</label>
-        <input type="number" [(ngModel)]="searchParams.startYear" />
-      </div>
-      <div class="form-elements">
-        <label>Endjahr</label>
-        <input type="number" [(ngModel)]="searchParams.endYear" />
-      </div>
-    </div>
-
-    <div class="button-group">
-      <button (click)="onSearch()" class="primary-btn">Stationen suchen</button>
-    </div>
-
-    <!-- Stationsauswahl -->
-    <div *ngIf="stations.length > 0" class="card station-select-card fade-in">
-      <label for="stationSelect"><strong>Bitte Station wählen:</strong></label>
-      <select
-        [ngModel]="selectedStationId"
-        (ngModelChange)="onStationSelectChange($event)"
-        class="styled-select"
+  <div class="flex flex-col min-h-screen bg-slate-100">
+    <!-- Header -->
+    <header
+      class="bg-gradient-to-r from-blue-700 to-blue-600 text-white flex justify-between items-center px-6 py-4 shadow-lg"
+    >
+      <span class="text-xl font-semibold tracking-wide">Weather Information Center</span>
+      <a
+        href="#"
+        class="px-3 py-1 rounded bg-blue-500 hover:bg-blue-400 text-white text-sm shadow-sm transition"
       >
-        <option value="" disabled>-- Station auswählen --</option>
-        <option *ngFor="let s of stations" [value]="s.stationId">
-          {{ s.name }} ({{ s.distanceKm | number: '1.1-1' }} km entfernt)
-        </option>
-      </select>
-    </div>
+        View Configuration
+      </a>
+    </header>
 
-    <!-- Anzeige-Filter -->
-    <h3>Anzeige-Filter</h3>
-    <table class="checkbox-table">
-      <thead>
-        <tr>
-          <th>Bereich</th>
-          <th>TMIN</th>
-          <th>TMAX</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Jahr</td>
-          <td>
-            <input
-              type="checkbox"
-              [(ngModel)]="searchParams.showYearMin"
-              (change)="onFilterChange()"
-            />
-          </td>
-          <td>
-            <input
-              type="checkbox"
-              [(ngModel)]="searchParams.showYearMax"
-              (change)="onFilterChange()"
-            />
-          </td>
-        </tr>
-        <tr>
-          <td>Frühling</td>
-          <td>
-            <input
-              type="checkbox"
-              [(ngModel)]="searchParams.showSpringMin"
-              (change)="onFilterChange()"
-            />
-          </td>
-          <td>
-            <input
-              type="checkbox"
-              [(ngModel)]="searchParams.showSpringMax"
-              (change)="onFilterChange()"
-            />
-          </td>
-        </tr>
-        <tr>
-          <td>Sommer</td>
-          <td>
-            <input
-              type="checkbox"
-              [(ngModel)]="searchParams.showSummerMin"
-              (change)="onFilterChange()"
-            />
-          </td>
-          <td>
-            <input
-              type="checkbox"
-              [(ngModel)]="searchParams.showSummerMax"
-              (change)="onFilterChange()"
-            />
-          </td>
-        </tr>
-        <tr>
-          <td>Herbst</td>
-          <td>
-            <input
-              type="checkbox"
-              [(ngModel)]="searchParams.showAutumnMin"
-              (change)="onFilterChange()"
-            />
-          </td>
-          <td>
-            <input
-              type="checkbox"
-              [(ngModel)]="searchParams.showAutumnMax"
-              (change)="onFilterChange()"
-            />
-          </td>
-        </tr>
-        <tr>
-          <td>Winter</td>
-          <td>
-            <input
-              type="checkbox"
-              [(ngModel)]="searchParams.showWinterMin"
-              (change)="onFilterChange()"
-            />
-          </td>
-          <td>
-            <input
-              type="checkbox"
-              [(ngModel)]="searchParams.showWinterMax"
-              (change)="onFilterChange()"
-            />
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Main Content Area -->
+      <main class="flex flex-col md:flex-row items-stretch justify-stretch px-6 py-6 flex-1 gap-6">
+        <!-- Table Section -->
+        <section
+          *ngIf="selectedStation && yearlyTableData.length > 0"
+          class="bg-white shadow-md rounded-lg flex flex-col overflow-hidden p-4 w-full md:w-64"
+        >
+          <div class="overflow-y-auto">
+            <table class="table-auto w-full text-xs">
+              <thead class="bg-gray-100 sticky top-0">
+                <tr>
+                  <th *ngFor="let col of displayedColumns">{{ col === 'year' ? 'Jahr' : col }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of yearlyTableData" class="hover:bg-gray-50 odd:bg-gray-50">
+                  <td *ngFor="let col of displayedColumns">{{ row[col] }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-    <!-- Fehlermeldung -->
-    <div *ngIf="errorMessage" class="error fade-in">{{ errorMessage }}</div>
-    <!-- Ladeanzeige -->
-    <div *ngIf="loading" class="loading-spinner">Daten werden verarbeitet...</div>
-  </div>
+        <!-- Chart Section -->
+        <section
+          *ngIf="selectedStation && yearlyTableData.length > 0"
+          class="flex-1 bg-white rounded-lg shadow-md flex flex-col p-6 min-h-[400px]"
+        >
+          <h2 class="font-bold text-xl mb-4 text-center">
+            Results for <span class="text-blue-700">{{ selectedStation?.name }}</span>
+          </h2>
+          <div class="flex-1 flex items-center justify-center">
+            <div echarts [options]="chartOption" class="w-full h-72"></div>
+          </div>
+        </section>
+      </main>
 
-  <!-- Ergebnisbereich -->
-  <div class="result-container fade-in">
-    <!-- Platzhaltertext vor Suche -->
-    <div *ngIf="!searchClicked && !loading" class="card result-card placeholder">
-      <div>Choose weather station</div>
-    </div>
+      <!-- Sidebar / Filters -->
+      <aside
+        class="w-full md:w-80 bg-white shadow-lg border-l px-6 py-6 flex flex-col gap-6 overflow-y-auto"
+      >
+        <!-- Search Form -->
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Search Settings</h3>
+          <form (submit)="onSearch(); $event.preventDefault()" class="flex flex-col gap-3">
+            <label class="text-sm">Latitude</label>
+            <input
+              type="number"
+              name="latitude"
+              [(ngModel)]="searchParams.latitude"
+              placeholder="e.g. 48.05"
+              class="rounded-lg border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
 
-    <!-- Chart und Tabelle -->
-    <div *ngIf="searchClicked && !loading && yearlyTableData.length > 0" class="card result-card">
-      <h2>Ergebnisse für {{ selectedStation?.name }}</h2>
+            <label class="text-sm">Longitude</label>
+            <input
+              type="number"
+              name="longitude"
+              [(ngModel)]="searchParams.longitude"
+              placeholder="e.g. 8.45"
+              class="rounded-lg border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
 
-      <div class="chart-container">
-        <div echarts [options]="chartOption" class="chart"></div>
-      </div>
+            <label class="text-sm">Radius (km)</label>
+            <input
+              type="number"
+              name="radiusKm"
+              [(ngModel)]="searchParams.radiusKm"
+              min="1"
+              max="50"
+              class="rounded-lg border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
 
-      <div class="table-section">
-        <h3>Tabellarische Übersicht</h3>
-        <div class="table-container">
-          <table class="data-table">
+            <label class="text-sm">Max Stations</label>
+            <input
+              type="number"
+              name="limit"
+              [(ngModel)]="searchParams.limit"
+              min="1"
+              max="5"
+              class="rounded-lg border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            <label class="text-sm">Year Start</label>
+            <input
+              type="number"
+              name="startYear"
+              [(ngModel)]="searchParams.startYear"
+              class="rounded-lg border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            <label class="text-sm">Year End</label>
+            <input
+              type="number"
+              name="endYear"
+              [(ngModel)]="searchParams.endYear"
+              class="rounded-lg border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            <button
+              type="submit"
+              class="mt-3 py-2 px-4 rounded-lg bg-blue-700 text-white hover:bg-blue-800 transition"
+            >
+              Search
+            </button>
+          </form>
+        </div>
+
+        <!-- Station Selection -->
+        <div *ngIf="stations.length > 0">
+          <label for="stationSelect" class="font-semibold block mb-2">Select Station:</label>
+          <select
+            [ngModel]="selectedStationId"
+            (ngModelChange)="onStationSelectChange($event)"
+            class="w-full rounded-lg border border-gray-300 bg-gray-50 text-sm p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="" disabled>-- Select station --</option>
+            <option *ngFor="let s of stations" [value]="s.stationId">
+              {{ s.name }} ({{ s.distanceKm }} km away)
+            </option>
+          </select>
+        </div>
+
+        <!-- Display Filters -->
+        <div>
+          <h4 class="font-semibold mb-2">Display Filters</h4>
+          <table class="w-full text-xs border">
             <thead>
-              <tr>
-                <th *ngFor="let col of displayedColumns">{{ col === 'year' ? 'Jahr' : col }}</th>
+              <tr class="bg-gray-100">
+                <th class="p-1">Range</th>
+                <th class="p-1">TMIN</th>
+                <th class="p-1">TMAX</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let row of yearlyTableData">
-                <td *ngFor="let col of displayedColumns">{{ row[col] }}</td>
+              <tr>
+                <td class="p-1">Year</td>
+                <td class="p-1 text-center">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="searchParams.showYearMin"
+                    (change)="onFilterChange()"
+                  />
+                </td>
+                <td class="p-1 text-center">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="searchParams.showYearMax"
+                    (change)="onFilterChange()"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td class="p-1">Spring</td>
+                <td class="p-1 text-center">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="searchParams.showSpringMin"
+                    (change)="onFilterChange()"
+                  />
+                </td>
+                <td class="p-1 text-center">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="searchParams.showSpringMax"
+                    (change)="onFilterChange()"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td class="p-1">Summer</td>
+                <td class="p-1 text-center">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="searchParams.showSummerMin"
+                    (change)="onFilterChange()"
+                  />
+                </td>
+                <td class="p-1 text-center">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="searchParams.showSummerMax"
+                    (change)="onFilterChange()"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td class="p-1">Autumn</td>
+                <td class="p-1 text-center">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="searchParams.showAutumnMin"
+                    (change)="onFilterChange()"
+                  />
+                </td>
+                <td class="p-1 text-center">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="searchParams.showAutumnMax"
+                    (change)="onFilterChange()"
+                  />
+                </td>
+              </tr>
+              <tr>
+                <td class="p-1">Winter</td>
+                <td class="p-1 text-center">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="searchParams.showWinterMin"
+                    (change)="onFilterChange()"
+                  />
+                </td>
+                <td class="p-1 text-center">
+                  <input
+                    type="checkbox"
+                    [(ngModel)]="searchParams.showWinterMax"
+                    (change)="onFilterChange()"
+                  />
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
+
+        <!-- Error + Loading State -->
+        <div
+          *ngIf="errorMessage"
+          class="mt-3 bg-red-50 border-l-4 border-red-500 p-3 text-red-600 text-xs font-semibold rounded-lg"
+        >
+          {{ errorMessage }}
+        </div>
+        <div *ngIf="loading" class="mt-3 flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+          <span
+            class="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-700"
+          ></span>
+          <span class="text-blue-700 text-sm">Processing data...</span>
+        </div>
+      </aside>
     </div>
   </div>
 </div>

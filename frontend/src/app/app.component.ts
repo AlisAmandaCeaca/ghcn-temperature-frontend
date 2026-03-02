@@ -142,7 +142,7 @@ export class AppComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => {
-        this.errorMessage = 'Fehler beim Laden';
+        this.errorMessage = 'Fehler beim Laden der Stationsdetails.';
       },
     });
   }
