@@ -12,5 +12,17 @@ services:
       - cache:/cache
     restart: unless-stopped
 
+  frontend:
+    build: ./frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+
 volumes:
   cache:
