@@ -4,13 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { NgxEchartsModule, NGX_ECHARTS_CONFIG } from 'ngx-echarts';
 import * as echarts from 'echarts';
-import {
-  DataService,
-  SearchParams,
-  TemperatureSeries,
-  StationSeriesResponse,
-} from './services/data';
+import { DataService, SearchParams, TemperatureSeries } from './services/data';
 import { EChartsOption } from 'echarts';
+import { ChangeDetectorRef } from '@angular/core';
 
 @Component({
   selector: 'app-root',
@@ -24,8 +20,11 @@ export class AppComponent implements OnInit {
   stations: any[] = [];
   selectedStation: any = null;
   yearlyTableData: any[] = [];
+  displayedColumns: string[] = [];
   loading = false;
   errorMessage: string | null = null;
+  selectedStationId: string = '';
+  searchClicked = false;
 
   chartOption: EChartsOption = {};
 
@@ -49,7 +48,10 @@ export class AppComponent implements OnInit {
     allStations: false,
   };
 
-  constructor(private dataService: DataService) {}
+  constructor(
+    private dataService: DataService,
+    private cdr: ChangeDetectorRef,
+  ) {}
 
   ngOnInit(): void {
     this.initChart();
@@ -57,125 +59,147 @@ export class AppComponent implements OnInit {
 
   private initChart(): void {
     this.chartOption = {
-      title: { text: 'Temperaturverlauf' },
+      title: { text: 'Temperaturverlauf', left: 'center' },
       tooltip: { trigger: 'axis' },
-      legend: { data: [] },
+      legend: { bottom: 0, padding: [20, 0] },
+      grid: { top: 80, bottom: 80 },
       xAxis: { type: 'category', data: [] },
       yAxis: { type: 'value', name: '°C' },
       series: [],
     };
   }
 
-  // Stationsuche
   onSearch(): void {
+    this.searchClicked = true;
     if (this.searchParams.latitude === null || this.searchParams.longitude === null) {
-      this.errorMessage = 'Bitte Koordinaten eingeben.';
+      this.errorMessage = 'Bitte gebe Koordinaten ein.';
+      this.stations = [];
+      this.selectedStationId = '';
+      this.selectedStation = null;
+      this.yearlyTableData = [];
+      this.initChart();
       return;
     }
 
     this.loading = true;
     this.errorMessage = null;
-    this.selectedStation = null;
-    this.yearlyTableData = [];
-    this.stations = [];
 
     this.dataService.getStationsFiltered(this.searchParams).subscribe({
       next: (response) => {
-        const results = response?.results ?? [];
-        if (results.length === 0) {
-          this.errorMessage = 'Keine Station im gewählten Radius gefunden.';
-          this.loading = false;
-          return;
+        this.stations = response?.results ?? [];
+
+        if (this.stations.length === 0) {
+          this.errorMessage = 'Keine Stationen vorhanden.';
         }
 
-        this.stations = results;
-        // Direkt erste Station auswählen
-        this.selectedStation = results[0];
-        this.loadStationDetails(this.selectedStation.stationId);
+        this.selectedStationId = '';
+        this.selectedStation = null;
+        this.yearlyTableData = [];
+        this.initChart();
+        this.loading = false;
+        this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.error(err);
+      error: () => {
         this.errorMessage = 'Fehler beim Laden der Stationen.';
         this.loading = false;
+        this.cdr.detectChanges();
       },
     });
   }
-
-  // Station auswählen
-  selectStation(station: any): void {
-    this.selectedStation = station;
-    this.loadStationDetails(station.stationId);
+  onStationSelectChange(stationId: string): void {
+    if (!stationId) return;
+    this.selectedStationId = stationId;
+    this.selectedStation = this.stations.find((s) => s.stationId === stationId);
+    this.loadStationDetails(stationId);
   }
 
   private loadStationDetails(stationId: string): void {
-    this.loading = true;
-    this.errorMessage = null;
-
     this.dataService.getStationDetails(stationId, this.searchParams).subscribe({
-      next: (data) => {
-        console.log('API Response:', data);
+      next: (data: any) => {
+        const years = data.years || [];
+        const raw = data.series || {};
+        const seriesArray: TemperatureSeries[] = [];
 
-        if (!data.series || data.series.length === 0) {
-          this.errorMessage = 'Keine Daten für die gewählten Filter gefunden.';
-          this.yearlyTableData = [];
-          this.chartOption = {};
-          this.loading = false;
-          return;
-        }
+        ['YEAR', 'SPRING', 'SUMMER', 'AUTUMN', 'WINTER'].forEach((period) => {
+          ['MIN', 'MAX'].forEach((type) => {
+            const jsonKey = `${period}_T${type}`;
+            const paramKey =
+              `show${period.charAt(0)}${period.slice(1).toLowerCase()}${type.charAt(0)}${type.slice(1).toLowerCase()}` as keyof SearchParams;
 
-        this.yearlyTableData = this.convertSeriesToTable(data.series, data.years);
-        this.updateChart(data.series, data.years);
-        this.loading = false;
+            if (this.searchParams[paramKey] && raw[jsonKey]) {
+              seriesArray.push({
+                name: `${period === 'YEAR' ? 'Jahr' : period} ${type === 'MIN' ? 'Min' : 'Max'}`,
+                data: raw[jsonKey],
+              });
+            }
+          });
+        });
+
+        this.displayedColumns = ['year', ...seriesArray.map((s) => s.name!)];
+        this.updateChart(seriesArray, years);
+        this.yearlyTableData = this.convertSeriesToTable(seriesArray, years);
+
+        this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.error('API Error:', err);
-        this.errorMessage = 'Fehler beim Laden der Stationendaten.';
-        this.loading = false;
+      error: () => {
+        this.errorMessage = 'Fehler beim Laden';
       },
     });
   }
-
-  // Hilfsfunktion
   private convertSeriesToTable(series: TemperatureSeries[], years: number[]): any[] {
-    const seriesArray = Array.isArray(series) ? series : [series];
-
     return years.map((year, i) => {
       const row: any = { year };
-      seriesArray.forEach((s) => {
-        if (s && s.data) {
-          row[s.name] = s.data[i] !== undefined ? s.data[i] : null;
-        }
+      series.forEach((s) => {
+        const val = s.data ? s.data[i] : null;
+        row[s.name!] = val !== null && val !== undefined ? val : '-';
       });
       return row;
     });
   }
 
-  // Chart
   private updateChart(series: TemperatureSeries[], years: number[]): void {
-    const seriesArray = Array.isArray(series) ? series : [series];
+    const legendData: string[] = series.map((s) => s.name).filter((name): name is string => !!name);
 
     this.chartOption = {
-      title: { text: 'Temperaturverlauf' },
+      title: {
+        text: this.selectedStation ? `Station: ${this.selectedStation.name}` : 'Temperaturverlauf',
+        left: 'center',
+      },
       tooltip: { trigger: 'axis' },
-      legend: { data: seriesArray.map((s) => s.name) },
-      xAxis: { type: 'category', data: years },
-      yAxis: { type: 'value', name: '°C' },
-      series: seriesArray.map((s) => ({
-        name: s.name,
+      legend: {
+        bottom: 0,
+        show: true,
+        data: legendData,
+      },
+      grid: { top: 60, bottom: 80, left: 50, right: 20 },
+      xAxis: {
+        type: 'category',
+        data: years.map((y) => y.toString()),
+        boundaryGap: false,
+      },
+      yAxis: {
+        type: 'value',
+        name: '°C',
+        axisLabel: { formatter: '{value} °C' },
+      },
+      series: series.map((s) => ({
+        name: s.name ?? 'Unbekannt',
         type: 'line',
         smooth: true,
+        connectNulls: true,
         data: s.data,
+        symbol: 'circle',
+        symbolSize: 6,
       })),
     };
   }
 
   onFilterChange(): void {
-    if (this.selectedStation) {
-      this.loadStationDetails(this.selectedStation.stationId);
+    if (this.selectedStationId) {
+      this.loadStationDetails(this.selectedStationId);
     }
   }
 
-  // Zurücksetzten
   onReset(): void {
     this.stations = [];
     this.selectedStation = null;

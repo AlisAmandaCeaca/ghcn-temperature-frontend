@@ -24,8 +24,9 @@ export interface SearchParams {
 }
 
 export interface TemperatureSeries {
-  name: string;
+  name?: string;
   data: (number | null)[];
+  [key: string]: any;
 }
 
 export interface StationSeriesResponse {
@@ -43,17 +44,22 @@ export class DataService {
   constructor(private http: HttpClient) {}
 
   getStationsFiltered(params: SearchParams): Observable<any> {
-    const query = `lat=${params.latitude}&lon=${params.longitude}&radiusKm=${params.radiusKm}&limit=${params.limit}&startYear=${params.startYear}&endYear=${params.endYear}`;
-    return this.http.get(`${this.baseUrl}/stations/nearby?${query}`);
+    const httpParams = new HttpParams()
+      .set('lat', params.latitude?.toString() || '0')
+      .set('lon', params.longitude?.toString() || '0')
+      .set('radiusKm', params.radiusKm.toString())
+      .set('limit', params.limit.toString())
+      .set('startYear', params.startYear.toString())
+      .set('endYear', params.endYear.toString());
+
+    return this.http.get(`${this.baseUrl}/stations/nearby`, { params: httpParams });
   }
 
-  // VOLLSTÄNDIG ANGEPASST: Sendet jetzt alle Filter-Parameter mit
   getStationDetails(stationId: string, params: SearchParams): Observable<StationSeriesResponse> {
     let httpParams = new HttpParams()
       .set('startYear', params.startYear.toString())
       .set('endYear', params.endYear.toString());
 
-    // Alle Booleans dynamisch anhängen
     const filterKeys: (keyof SearchParams)[] = [
       'showYearMin',
       'showYearMax',
@@ -68,7 +74,7 @@ export class DataService {
     ];
 
     filterKeys.forEach((key) => {
-      if (params[key]) {
+      if (params[key] === true) {
         httpParams = httpParams.set(key.toString(), 'true');
       }
     });
