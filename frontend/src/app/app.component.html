@@ -1,4 +1,4 @@
-<div class="container">
+<div class="container-fluid">
   <div class="flex flex-col min-h-screen bg-slate-100">
     <!-- Header -->
     <header
@@ -22,8 +22,13 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let row of yearlyTableData" class="hover:bg-gray-50 odd:bg-gray-50">
-                <td *ngFor="let col of displayedColumns">{{ row[col] | number: '1.1-2' }}</td>
+              <tr
+                *ngFor="let row of yearlyTableData"
+                class="text-center hover:bg-gray-50 odd:bg-gray-50"
+              >
+                <td *ngFor="let col of displayedColumns; let i = index">
+                  {{ i === 0 ? row[col] : (row[col] | number: '1.1-2') }}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -35,7 +40,12 @@
           class="flex-1 bg-white rounded-lg shadow-md flex flex-col p-6 min-h-[400px]"
         >
           <div class="flex-1 flex justify-center items-start">
-            <div echarts [options]="chartOption" class="w-full h-72"></div>
+            <div
+              echarts
+              [options]="chartOption"
+              style="width: 100%; height: 600px"
+              class="w-full h-72"
+            ></div>
           </div>
         </section>
       </main>
@@ -48,42 +58,74 @@
         <div>
           <h3 class="font-semibold block mb-3">Search Settings:</h3>
           <form (submit)="onSearch(); $event.preventDefault()" class="flex flex-col gap-3">
-            <div class="flex flex-row items-center gap-3">
-              <label class="text-sm w-20">Latitude</label>
-              <input
-                type="text"
-                inputmode="decimal"
-                name="latitude"
-                [(ngModel)]="searchParams.latitude"
-                placeholder="e.g. 48.05"
-                class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-34 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <div class="flex flex-col gap-1">
+              <div class="flex flex-row items-center gap-3">
+                <label class="text-sm w-20">Latitude</label>
+                <input
+                  type="number"
+                  step="any"
+                  name="latitude"
+                  [(ngModel)]="searchParams.latitude"
+                  #lat="ngModel"
+                  [min]="metadata.latitude?.min"
+                  [max]="metadata.latitude?.max"
+                  class="rounded-lg border p-2 text-sm w-44 focus:outline-none focus:ring-2"
+                  [ngClass]="
+                    lat.invalid && (lat.dirty || lat.touched)
+                      ? 'border-red-500 ring-red-100'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  "
+                />
+              </div>
+              <div
+                *ngIf="lat.errors?.['min'] || lat.errors?.['max']"
+                class="text-[10px] text-red-600 font-semibold ml-24"
+              >
+                Out of range ({{ metadata.latitude?.min }} to {{ metadata.latitude?.max }})
+              </div>
             </div>
 
-            <div class="flex flex-row items-center gap-3">
-              <label class="text-sm w-20">Longitude</label>
-              <input
-                type="text"
-                inputmode="decimal"
-                name="longitude"
-                [(ngModel)]="searchParams.longitude"
-                placeholder="e.g. 8.45"
-                class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-34 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <div class="flex flex-col gap-1">
+              <div class="flex flex-row items-center gap-3">
+                <label class="text-sm w-20">Longitude</label>
+                <input
+                  type="number"
+                  step="any"
+                  name="longitude"
+                  [(ngModel)]="searchParams.longitude"
+                  #lon="ngModel"
+                  [min]="metadata.longitude?.min"
+                  [max]="metadata.longitude?.max"
+                  class="rounded-lg border p-2 text-sm w-44 focus:outline-none focus:ring-2"
+                  [ngClass]="
+                    lon.invalid && (lon.dirty || lon.touched)
+                      ? 'border-red-500 ring-red-100'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  "
+                />
+              </div>
+              <div
+                *ngIf="lon.errors?.['min'] || lon.errors?.['max']"
+                class="text-[10px] text-red-600 font-semibold ml-24"
+              >
+                Out of range ({{ metadata.longitude?.min }} to {{ metadata.longitude?.max }})
+              </div>
             </div>
 
-            <div class="flex flex-row items-center gap-3">
-              <label class="text-sm w-20">Radius (km)</label>
-              <input
-                type="text"
-                inputmode="decimal"
-                name="radiusKm"
-                [(ngModel)]="searchParams.radiusKm"
-                min="1"
-                max="50"
-                step="0.1"
-                class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-44 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <div class="flex flex-col gap-1">
+              <div class="flex flex-row items-center gap-3">
+                <label class="text-sm w-20">Radius (km)</label>
+                <input
+                  type="number"
+                  name="radiusKm"
+                  [(ngModel)]="searchParams.radiusKm"
+                  #rad="ngModel"
+                  min="1"
+                  max="50"
+                  step="0.1"
+                  class="rounded-lg border p-2 text-sm w-44 focus:outline-none focus:ring-2"
+                />
+              </div>
             </div>
 
             <div class="flex flex-row items-center gap-3">
@@ -100,26 +142,58 @@
               />
             </div>
 
-            <div class="flex flex-row items-center gap-3">
-              <label class="text-sm w-20">Year Start</label>
-              <input
-                type="text"
-                inputmode="decimal"
-                name="startYear"
-                [(ngModel)]="searchParams.startYear"
-                class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-34 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <div class="flex flex-col gap-1">
+              <div class="flex flex-row items-center gap-3">
+                <label class="text-sm w-20">Year Start</label>
+                <input
+                  type="number"
+                  name="startYear"
+                  [(ngModel)]="searchParams.startYear"
+                  #yStart="ngModel"
+                  [min]="metadata.startYear?.min"
+                  [max]="metadata.startYear?.max"
+                  class="rounded-lg border p-2 text-sm w-44 focus:outline-none focus:ring-2"
+                  [ngClass]="
+                    (yStart.invalid || searchParams.startYear > searchParams.endYear) &&
+                    (yStart.dirty || yStart.touched)
+                      ? 'border-red-500 ring-red-100'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  "
+                />
+              </div>
             </div>
 
-            <div class="flex flex-row items-center gap-3">
-              <label class="text-sm w-20">Year End</label>
-              <input
-                type="text"
-                inputmode="decimal"
-                name="endYear"
-                [(ngModel)]="searchParams.endYear"
-                class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-34 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <div class="flex flex-col gap-1">
+              <div class="flex flex-row items-center gap-3">
+                <label class="text-sm w-20">Year End</label>
+                <input
+                  type="number"
+                  name="endYear"
+                  [(ngModel)]="searchParams.endYear"
+                  #yEnd="ngModel"
+                  [min]="metadata.endYear?.min"
+                  [max]="metadata.endYear?.max"
+                  class="rounded-lg border p-2 text-sm w-44 focus:outline-none focus:ring-2"
+                  [ngClass]="
+                    (yEnd.invalid || searchParams.startYear > searchParams.endYear) &&
+                    (yEnd.dirty || yEnd.touched)
+                      ? 'border-red-500 ring-red-100'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  "
+                />
+              </div>
+              <div
+                *ngIf="yEnd.errors?.['min'] || yEnd.errors?.['max']"
+                class="text-[10px] text-red-600 font-semibold ml-24"
+              >
+                Range: {{ metadata.startYear?.min }} - {{ metadata.startYear?.max }}
+              </div>
+            </div>
+            <div
+              *ngIf="searchParams.startYear > searchParams.endYear"
+              class="text-[10px] text-red-600 font-bold ml-24"
+            >
+              End Year must be after Start Year!
             </div>
 
             <button

@@ -25,6 +25,7 @@ export class AppComponent implements OnInit {
   errorMessage: string | null = null;
   selectedStationId: string = '';
   searchClicked = false;
+  metadata: any = {};
 
   chartOption: EChartsOption = {};
 
@@ -55,6 +56,7 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.initChart();
+    this.loadApiMeta();
   }
 
   private initChart(): void {
@@ -68,11 +70,30 @@ export class AppComponent implements OnInit {
       series: [],
     };
   }
+  private loadApiMeta(): void {
+    this.dataService.getApiMeta().subscribe({
+      next: (res) => {
+        const ui = res.ui;
+        this.metadata = {
+          latitude: { min: -90, max: 90 }, // Weltweit Standard
+          longitude: { min: -180, max: 180 }, // Weltweit Standard
+          radiusKm: { min: ui.radiusKmMin, max: ui.radiusKmMax },
+          limit: { min: ui.limitMin, max: ui.limitMax },
+          startYear: { min: ui.minYear, max: ui.maxYear },
+          endYear: { min: ui.minYear, max: ui.maxYear },
+        };
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.errorMessage = 'Could not load API metadata.';
+      },
+    });
+  }
 
   onSearch(): void {
     this.searchClicked = true;
     if (this.searchParams.latitude === null || this.searchParams.longitude === null) {
-      this.errorMessage = 'Bitte gebe Koordinaten ein.';
+      this.errorMessage = 'Please enter coordinates.';
       this.stations = [];
       this.selectedStationId = '';
       this.selectedStation = null;
@@ -89,7 +110,7 @@ export class AppComponent implements OnInit {
         this.stations = response?.results ?? [];
 
         if (this.stations.length === 0) {
-          this.errorMessage = 'Keine Stationen vorhanden.';
+          this.errorMessage = 'No station available.';
         }
 
         this.selectedStationId = '';
@@ -100,7 +121,7 @@ export class AppComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => {
-        this.errorMessage = 'Fehler beim Laden der Stationen.';
+        this.errorMessage = 'Stations could not be uploaded.';
         this.loading = false;
         this.cdr.detectChanges();
       },
@@ -128,7 +149,7 @@ export class AppComponent implements OnInit {
 
             if (this.searchParams[paramKey] && raw[jsonKey]) {
               seriesArray.push({
-                name: `${period === 'YEAR' ? 'Jahr' : period} ${type === 'MIN' ? 'Min' : 'Max'}`,
+                name: `${period === 'YEAR' ? 'YEAR' : period} ${type === 'MIN' ? 'Min' : 'Max'}`,
                 data: raw[jsonKey],
               });
             }
@@ -142,7 +163,7 @@ export class AppComponent implements OnInit {
         this.cdr.detectChanges();
       },
       error: () => {
-        this.errorMessage = 'Fehler beim Laden der Stationsdetails.';
+        this.errorMessage = 'Stations could not be uploaded.';
       },
     });
   }
@@ -162,7 +183,7 @@ export class AppComponent implements OnInit {
 
     this.chartOption = {
       title: {
-        text: this.selectedStation ? `Station: ${this.selectedStation.name}` : 'Temperaturverlauf',
+        text: this.selectedStation ? `Station: ${this.selectedStation.name}` : 'temperature chart',
         left: 'center',
       },
       tooltip: { trigger: 'axis' },
@@ -174,16 +195,17 @@ export class AppComponent implements OnInit {
 
       xAxis: {
         type: 'category',
+        name: 'YEAR',
         data: years.map((y) => y.toString()),
         boundaryGap: false,
       },
       yAxis: {
         type: 'value',
         name: '°C',
-        axisLabel: { formatter: '{value} °C' },
+        axisLabel: { formatter: '{value}' },
       },
       series: series.map((s) => ({
-        name: s.name ?? 'Unbekannt',
+        name: s.name ?? 'Unknown',
         type: 'line',
         smooth: true,
         connectNulls: true,
@@ -192,6 +214,36 @@ export class AppComponent implements OnInit {
         symbolSize: 6,
       })),
     };
+  }
+  private updateMetadataFromStations(stations: any[]): void {
+    if (!stations.length) return;
+
+    this.metadata = {
+      latitude: {
+        min: Math.min(...stations.map((s) => s.latitude)),
+        max: Math.max(...stations.map((s) => s.latitude)),
+      },
+      longitude: {
+        min: Math.min(...stations.map((s) => s.longitude)),
+        max: Math.max(...stations.map((s) => s.longitude)),
+      },
+      radiusKm: { min: 1, max: 50 }, // Standard, da kein Radius im Datenfeld
+      limit: { min: 1, max: stations.length },
+      startYear: {
+        min: Math.min(...stations.flatMap((s) => s.availableYears)),
+        max: Math.max(...stations.flatMap((s) => s.availableYears)),
+      },
+      endYear: {
+        min: Math.min(...stations.flatMap((s) => s.availableYears)),
+        max: Math.max(...stations.flatMap((s) => s.availableYears)),
+      },
+    };
+  }
+  private updateMetadataFromYears(years: number[]): void {
+    if (!years.length) return;
+
+    this.metadata.startYear = { min: Math.min(...years), max: Math.max(...years) };
+    this.metadata.endYear = { min: Math.min(...years), max: Math.max(...years) };
   }
 
   onFilterChange(): void {

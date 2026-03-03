@@ -54,6 +54,9 @@ export class DataService {
 
     return this.http.get(`${this.baseUrl}/stations/nearby`, { params: httpParams });
   }
+  getApiMeta(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/meta`);
+  }
 
   getStationDetails(stationId: string, params: SearchParams): Observable<StationSeriesResponse> {
     let httpParams = new HttpParams()
