@@ -48,59 +48,72 @@
         <div>
           <h3 class="font-semibold block mb-3">Search Settings:</h3>
           <form (submit)="onSearch(); $event.preventDefault()" class="flex flex-col gap-3">
-            <label class="text-sm w-20">Latitude</label>
-            <input
-              type="number"
-              name="latitude"
-              [(ngModel)]="searchParams.latitude"
-              placeholder="e.g. 48.05"
-              class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-34 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            
+            <div class="flex flex-row items-center gap-3">
+              <label class="text-sm w-20">Latitude</label>
+              <input
+                type="number"
+                name="latitude"
+                [(ngModel)]="searchParams.latitude"
+                placeholder="e.g. 48.05"
+                class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-34 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div class="flex flex-row items-center gap-3">
+              <label class="text-smw-20">Longitude</label>
+              <input
+                type="number"
+                name="longitude"
+                [(ngModel)]="searchParams.longitude"
+                placeholder="e.g. 8.45"
+                class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-34 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+           
+            <div class="flex flex-row items-center gap-3">
+              <label class="text-sm w-20">Radius (km)</label>
+              <input
+                type="number"
+                name="radiusKm"
+                [(ngModel)]="searchParams.radiusKm"
+                min="1"
+                max="50"
+                class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-44 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
 
-            <label class="text-smw-20">Longitude</label>
-            <input
-              type="number"
-              name="longitude"
-              [(ngModel)]="searchParams.longitude"
-              placeholder="e.g. 8.45"
-              class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-34 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div class="flex flex-row items-center gap-3">
+              <label class="text-sm w-20">Max Stations</label>
+              <input
+                type="number"
+                name="limit"
+                [(ngModel)]="searchParams.limit"
+                min="1"
+                max="5"
+                class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-44 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
 
-            <label class="text-sm w-20">Radius (km)</label>
-            <input
-              type="number"
-              name="radiusKm"
-              [(ngModel)]="searchParams.radiusKm"
-              min="1"
-              max="50"
-              class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-44 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div class="flex flex-row items-center gap-3">
+              <label class="text-sm w-20">Year Start</label>
+              <input
+                type="number"
+                name="startYear"
+                [(ngModel)]="searchParams.startYear"
+                class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-34 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
 
-            <label class="text-sm w-20">Max Stations</label>
-            <input
-              type="number"
-              name="limit"
-              [(ngModel)]="searchParams.limit"
-              min="1"
-              max="5"
-              class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-44 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-
-            <label class="text-sm w-20">Year Start</label>
-            <input
-              type="number"
-              name="startYear"
-              [(ngModel)]="searchParams.startYear"
-              class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-34 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-
-            <label class="text-sm w-20">Year End</label>
-            <input
-              type="number"
-              name="endYear"
-              [(ngModel)]="searchParams.endYear"
-              class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-34 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div class="flex flex-row items-center gap-3">
+              <label class="text-sm w-20">Year End</label>
+              <input
+                type="number"
+                name="endYear"
+                [(ngModel)]="searchParams.endYear"
+                class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-34 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
 
             <button
               type="submit"
