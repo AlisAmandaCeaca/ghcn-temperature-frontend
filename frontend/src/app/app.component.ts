@@ -171,7 +171,7 @@ export class AppComponent implements OnInit {
         show: true,
         data: legendData,
       },
-      grid: { top: 60, bottom: 80, left: 50, right: 20 },
+
       xAxis: {
         type: 'category',
         data: years.map((y) => y.toString()),
