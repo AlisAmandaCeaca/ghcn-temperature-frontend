@@ -27,13 +27,7 @@
                 class="text-center hover:bg-gray-50 odd:bg-gray-50"
               >
                 <td *ngFor="let col of displayedColumns; let i = index">
-                  {{
-                    i === 0
-                      ? row[col]
-                      : row[col] === null
-                        ? '-'
-                        : (row[col] | number: '1.1-2')
-                  }}
+                  {{ i === 0 ? row[col] : row[col] === null ? '-' : (row[col] | number: '1.1-2') }}
                 </td>
               </tr>
             </tbody>
@@ -126,11 +120,22 @@
                   name="radiusKm"
                   [(ngModel)]="searchParams.radiusKm"
                   #rad="ngModel"
-                  min="1"
-                  max="50"
+                  [min]="metadata.radiusKm?.min"
+                  [max]="metadata.radiusKm?.max"
                   step="0.1"
                   class="rounded-lg border p-2 text-sm w-44 focus:outline-none focus:ring-2"
+                  [ngClass]="
+                    rad.invalid && (rad.dirty || rad.touched)
+                      ? 'border-red-500 ring-red-100'
+                      : 'border-gray-300 focus:ring-blue-500'
+                  "
                 />
+              </div>
+              <div
+                *ngIf="rad.errors?.['min'] || rad.errors?.['max']"
+                class="text-[10px] text-red-600 font-semibold ml-24"
+              >
+                Out of range ({{ metadata.radiusKm?.min }} to {{ metadata.radiusKm?.max }})
               </div>
             </div>
 
@@ -141,11 +146,18 @@
                 inputmode="decimal"
                 name="limit"
                 [(ngModel)]="searchParams.limit"
-                min="1"
-                max="5"
+                #top="ngModel"
+                [min]="metadata.limit?.min"
+                [max]="metadata.limit?.max"
                 step="1"
                 class="rounded-lg border border-gray-300 p-2 text-sm text-sm w-44 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div
+              *ngIf="top.errors?.['min'] || top.errors?.['max']"
+              class="text-[10px] text-red-600 font-semibold ml-24"
+            >
+              Out of range ({{ metadata.limit?.min }} to {{ metadata.limit?.max }})
             </div>
 
             <div class="flex flex-col gap-1">
@@ -166,6 +178,25 @@
                       : 'border-gray-300 focus:ring-blue-500'
                   "
                 />
+              </div>
+              <div
+                *ngIf="
+                  (yStart.errors?.['min'] || yStart.errors?.['max']) &&
+                  (yStart.dirty || yStart.touched)
+                "
+                class="text-[10px] text-red-600 font-semibold ml-24"
+              >
+                Range: {{ metadata.startYear?.min }} - {{ metadata.startYear?.max }}
+              </div>
+
+              <!-- Start-End Logik -->
+              <div
+                *ngIf="
+                  searchParams.startYear > searchParams.endYear && (yStart.dirty || yStart.touched)
+                "
+                class="text-[10px] text-red-600 font-bold ml-24"
+              >
+                Start Year must be before End Year!
               </div>
             </div>
 
@@ -188,18 +219,25 @@
                   "
                 />
               </div>
+              <!-- Range Meldung -->
               <div
-                *ngIf="yEnd.errors?.['min'] || yEnd.errors?.['max']"
+                *ngIf="
+                  (yEnd.errors?.['min'] || yEnd.errors?.['max']) && (yEnd.dirty || yEnd.touched)
+                "
                 class="text-[10px] text-red-600 font-semibold ml-24"
               >
-                Range: {{ metadata.startYear?.min }} - {{ metadata.startYear?.max }}
+                Range: {{ metadata.endYear?.min }} - {{ metadata.endYear?.max }}
               </div>
-            </div>
-            <div
-              *ngIf="searchParams.startYear > searchParams.endYear"
-              class="text-[10px] text-red-600 font-bold ml-24"
-            >
-              End Year must be after Start Year!
+
+              <!-- End-Start Logik -->
+              <div
+                *ngIf="
+                  searchParams.startYear > searchParams.endYear && (yEnd.dirty || yEnd.touched)
+                "
+                class="text-[10px] text-red-600 font-bold ml-24"
+              >
+                End Year must be after Start Year!
+              </div>
             </div>
 
             <button
