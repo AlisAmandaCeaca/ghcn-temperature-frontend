@@ -172,10 +172,19 @@ export class AppComponent implements OnInit {
       const row: any = { year };
       series.forEach((s) => {
         const val = s.data ? s.data[i] : null;
-        row[s.name!] = val !== null && val !== undefined ? val : '-';
+        row[s.name!] = this.toFiniteNumberOrNull(val);
       });
       return row;
     });
+  }
+
+  private toFiniteNumberOrNull(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+
+    const parsed = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   private updateChart(series: TemperatureSeries[], years: number[]): void {
