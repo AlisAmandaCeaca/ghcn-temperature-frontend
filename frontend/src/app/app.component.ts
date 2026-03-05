@@ -14,7 +14,6 @@ import { ChangeDetectorRef } from '@angular/core';
   imports: [CommonModule, FormsModule, HttpClientModule, NgxEchartsModule],
   providers: [{ provide: NGX_ECHARTS_CONFIG, useValue: { echarts } }],
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css'],
 })
 export class AppComponent implements OnInit {
   stations: any[] = [];
@@ -75,8 +74,8 @@ export class AppComponent implements OnInit {
       next: (res) => {
         const ui = res.ui;
         this.metadata = {
-          latitude: { min: -90, max: 90 }, // Weltweit Standard
-          longitude: { min: -180, max: 180 }, // Weltweit Standard
+          latitude: { min: -90, max: 90 },
+          longitude: { min: -180, max: 180 },
           radiusKm: { min: ui.radiusKmMin, max: ui.radiusKmMax },
           limit: { min: ui.limitMin, max: ui.limitMax },
           startYear: { min: ui.minYear, max: ui.maxYear },
@@ -200,6 +199,7 @@ export class AppComponent implements OnInit {
         bottom: 0,
         show: true,
         data: legendData,
+        selectedMode: false,
       },
 
       xAxis: {
@@ -213,46 +213,17 @@ export class AppComponent implements OnInit {
         name: '°C',
         axisLabel: { formatter: '{value}' },
       },
+      dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 30 }],
       series: series.map((s) => ({
         name: s.name ?? 'Unknown',
         type: 'line',
-        smooth: true,
-        connectNulls: true,
+        smooth: false,
+        connectNulls: false,
         data: s.data,
         symbol: 'circle',
         symbolSize: 6,
       })),
     };
-  }
-  private updateMetadataFromStations(stations: any[]): void {
-    if (!stations.length) return;
-
-    this.metadata = {
-      latitude: {
-        min: Math.min(...stations.map((s) => s.latitude)),
-        max: Math.max(...stations.map((s) => s.latitude)),
-      },
-      longitude: {
-        min: Math.min(...stations.map((s) => s.longitude)),
-        max: Math.max(...stations.map((s) => s.longitude)),
-      },
-      radiusKm: { min: 1, max: 50 }, // Standard, da kein Radius im Datenfeld
-      limit: { min: 1, max: stations.length },
-      startYear: {
-        min: Math.min(...stations.flatMap((s) => s.availableYears)),
-        max: Math.max(...stations.flatMap((s) => s.availableYears)),
-      },
-      endYear: {
-        min: Math.min(...stations.flatMap((s) => s.availableYears)),
-        max: Math.max(...stations.flatMap((s) => s.availableYears)),
-      },
-    };
-  }
-  private updateMetadataFromYears(years: number[]): void {
-    if (!years.length) return;
-
-    this.metadata.startYear = { min: Math.min(...years), max: Math.max(...years) };
-    this.metadata.endYear = { min: Math.min(...years), max: Math.max(...years) };
   }
 
   onFilterChange(): void {
