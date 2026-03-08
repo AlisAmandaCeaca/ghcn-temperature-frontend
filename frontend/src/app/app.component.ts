@@ -57,6 +57,11 @@ export class AppComponent implements OnInit {
     this.initChart();
     this.loadApiMeta();
   }
+  blockDecimal(event: KeyboardEvent) {
+    if (event.key === '.' || event.key === ',') {
+      event.preventDefault();
+    }
+  }
 
   private initChart(): void {
     this.chartOption = {
