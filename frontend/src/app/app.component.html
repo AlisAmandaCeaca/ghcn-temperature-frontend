@@ -255,7 +255,7 @@
           >
             <option value="" disabled>-- Select station --</option>
             <option *ngFor="let s of stations" [value]="s.stationId">
-              {{ s.name }} ({{ s.distanceKm }} km away)
+              {{ s.name }} ({{ s.distanceKm | number: '1.1-1' }} km)
             </option>
           </select>
         </div>

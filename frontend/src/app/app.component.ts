@@ -154,6 +154,7 @@ export class AppComponent implements OnInit {
 
   onSearch(): void {
     this.searchClicked = true;
+    this.resetView();
 
     if (this.searchParams.latitude === null || this.searchParams.longitude === null) {
       this.errorMessage = 'Please enter coordinates.';
@@ -275,6 +276,18 @@ export class AppComponent implements OnInit {
 
   private updateChart(series: TemperatureSeries[], years: number[]): void {
     const legendData = series.map((s) => s.name!).filter(Boolean);
+    const colorMap: Record<string, string> = {
+      'YEAR Min': '#0095ffff', // Blau
+      'YEAR Max': '#ff0000ff', // Rot
+      'WINTER Max': '#cdcdcdff', // Hellgrau
+      'WINTER Min': '#5b5b5bff', // Dunkelgrau
+      'SPRING Max': '#e9aee3ff', // Rosa
+      'SPRING Min': '#ee56e4ff', // Dunkelrosa
+      'SUMMER Max': '#a1e9a1ff', // Hellgrün
+      'SUMMER Min': '#2e632aff', // Dunkelgrün
+      'AUTUMN Max': '#f98832ff', // Hellbraun
+      'AUTUMN Min': '#753c00ff', // Dunkelbraun
+    };
 
     this.chartOption = {
       title: {
@@ -314,7 +327,7 @@ export class AppComponent implements OnInit {
         data: s.data,
         symbol: 'circle',
         symbolSize: 5,
-
+        color: colorMap[s.name!],
         sampling: 'lttb',
 
         progressive: 500,
@@ -336,8 +349,10 @@ export class AppComponent implements OnInit {
   private resetView(): void {
     this.stations = [];
     this.selectedStation = null;
+    this.selectedStationId = '';
     this.yearlyTableData = [];
     this.errorMessage = null;
     this.initChart();
+    this.cdr.detectChanges();
   }
 }
