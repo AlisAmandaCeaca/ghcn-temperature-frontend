@@ -21,7 +21,7 @@
             </thead>
             <tbody>
               <tr
-                *ngFor="let row of yearlyTableData"
+                *ngFor="let row of yearlyTableData; trackBy: trackByYear"
                 class="text-center hover:bg-gray-50 odd:bg-gray-50"
               >
                 <td *ngFor="let col of displayedColumns; let i = index">

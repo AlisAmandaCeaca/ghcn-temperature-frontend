@@ -1,12 +1,32 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { NgxEchartsModule, NGX_ECHARTS_CONFIG } from 'ngx-echarts';
-import * as echarts from 'echarts';
 import { DataService, SearchParams, TemperatureSeries } from './services/data';
 import { EChartsOption } from 'echarts';
-import { ChangeDetectorRef } from '@angular/core';
+import * as echarts from 'echarts/core';
+import { LineChart } from 'echarts/charts';
+
+import {
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+  DataZoomComponent,
+} from 'echarts/components';
+
+import { CanvasRenderer } from 'echarts/renderers';
+
+echarts.use([
+  LineChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent,
+  DataZoomComponent,
+  CanvasRenderer,
+]);
 
 @Component({
   selector: 'app-root',
@@ -18,12 +38,16 @@ import { ChangeDetectorRef } from '@angular/core';
 export class AppComponent implements OnInit {
   stations: any[] = [];
   selectedStation: any = null;
+
   yearlyTableData: any[] = [];
   displayedColumns: string[] = [];
+
   loading = false;
   errorMessage: string | null = null;
+
   selectedStationId: string = '';
   searchClicked = false;
+
   metadata: any = {};
 
   chartOption: EChartsOption = {};
@@ -57,6 +81,11 @@ export class AppComponent implements OnInit {
     this.initChart();
     this.loadApiMeta();
   }
+
+  trackByYear(item: any) {
+    return item.year;
+  }
+
   blockDecimal(event: KeyboardEvent) {
     if (event.key === '.' || event.key === ',') {
       event.preventDefault();
@@ -65,19 +94,47 @@ export class AppComponent implements OnInit {
 
   private initChart(): void {
     this.chartOption = {
-      title: { text: 'Temperaturverlauf', left: 'center' },
-      tooltip: { trigger: 'axis' },
-      legend: { bottom: 0, padding: [20, 0] },
-      grid: { top: 80, bottom: 80 },
-      xAxis: { type: 'category', data: [] },
-      yAxis: { type: 'value', name: '°C' },
+      title: {
+        text: 'Temperaturverlauf',
+        left: 'center',
+      },
+
+      tooltip: {
+        trigger: 'axis',
+        confine: true,
+      },
+
+      legend: {
+        bottom: 0,
+      },
+
+      grid: {
+        top: 70,
+        bottom: 80,
+        left: 50,
+        right: 30,
+      },
+
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: [],
+      },
+
+      yAxis: {
+        type: 'value',
+        name: '°C',
+      },
+
       series: [],
     };
   }
+
   private loadApiMeta(): void {
     this.dataService.getApiMeta().subscribe({
       next: (res) => {
         const ui = res.ui;
+
         this.metadata = {
           latitude: { min: -90, max: 90 },
           longitude: { min: -180, max: 180 },
@@ -86,6 +143,7 @@ export class AppComponent implements OnInit {
           startYear: { min: ui.minYear, max: ui.maxYear },
           endYear: { min: ui.minYear, max: ui.maxYear },
         };
+
         this.cdr.detectChanges();
       },
       error: () => {
@@ -96,13 +154,10 @@ export class AppComponent implements OnInit {
 
   onSearch(): void {
     this.searchClicked = true;
+
     if (this.searchParams.latitude === null || this.searchParams.longitude === null) {
       this.errorMessage = 'Please enter coordinates.';
-      this.stations = [];
-      this.selectedStationId = '';
-      this.selectedStation = null;
-      this.yearlyTableData = [];
-      this.initChart();
+      this.resetView();
       return;
     }
 
@@ -120,10 +175,13 @@ export class AppComponent implements OnInit {
         this.selectedStationId = '';
         this.selectedStation = null;
         this.yearlyTableData = [];
+
         this.initChart();
+
         this.loading = false;
         this.cdr.detectChanges();
       },
+
       error: () => {
         this.errorMessage = 'Stations could not be uploaded.';
         this.loading = false;
@@ -131,10 +189,13 @@ export class AppComponent implements OnInit {
       },
     });
   }
+
   onStationSelectChange(stationId: string): void {
     if (!stationId) return;
+
     this.selectedStationId = stationId;
     this.selectedStation = this.stations.find((s) => s.stationId === stationId);
+
     this.loadStationDetails(stationId);
   }
 
@@ -145,39 +206,59 @@ export class AppComponent implements OnInit {
         const raw = data.series || {};
         const seriesArray: TemperatureSeries[] = [];
 
-        ['YEAR', 'SPRING', 'SUMMER', 'AUTUMN', 'WINTER'].forEach((period) => {
-          ['MIN', 'MAX'].forEach((type) => {
-            const jsonKey = `${period}_T${type}`;
-            const paramKey =
-              `show${period.charAt(0)}${period.slice(1).toLowerCase()}${type.charAt(0)}${type.slice(1).toLowerCase()}` as keyof SearchParams;
+        const paramKeyMap: Record<string, keyof SearchParams> = {
+          YEAR_TMIN: 'showYearMin',
+          YEAR_TMAX: 'showYearMax',
 
-            if (this.searchParams[paramKey] && raw[jsonKey]) {
-              seriesArray.push({
-                name: `${period === 'YEAR' ? 'YEAR' : period} ${type === 'MIN' ? 'Min' : 'Max'}`,
-                data: raw[jsonKey],
-              });
-            }
-          });
+          SPRING_TMIN: 'showSpringMin',
+          SPRING_TMAX: 'showSpringMax',
+
+          SUMMER_TMIN: 'showSummerMin',
+          SUMMER_TMAX: 'showSummerMax',
+
+          AUTUMN_TMIN: 'showAutumnMin',
+          AUTUMN_TMAX: 'showAutumnMax',
+
+          WINTER_TMIN: 'showWinterMin',
+          WINTER_TMAX: 'showWinterMax',
+        };
+
+        Object.entries(paramKeyMap).forEach(([jsonKey, paramKey]) => {
+          if (this.searchParams[paramKey] && raw[jsonKey]) {
+            const [period, type] = jsonKey.split('_T');
+
+            seriesArray.push({
+              name: `${period} ${type === 'MIN' ? 'Min' : 'Max'}`,
+              data: raw[jsonKey],
+            });
+          }
         });
 
         this.displayedColumns = ['year', ...seriesArray.map((s) => s.name!)];
+
         this.updateChart(seriesArray, years);
+
         this.yearlyTableData = this.convertSeriesToTable(seriesArray, years);
 
         this.cdr.detectChanges();
       },
+
       error: () => {
         this.errorMessage = 'Stations could not be uploaded.';
       },
     });
   }
+
   private convertSeriesToTable(series: TemperatureSeries[], years: number[]): any[] {
     return years.map((year, i) => {
       const row: any = { year };
+
       series.forEach((s) => {
         const val = s.data ? s.data[i] : null;
+
         row[s.name!] = this.toFiniteNumberOrNull(val);
       });
+
       return row;
     });
   }
@@ -188,21 +269,25 @@ export class AppComponent implements OnInit {
     }
 
     const parsed = typeof value === 'number' ? value : Number(value);
+
     return Number.isFinite(parsed) ? parsed : null;
   }
 
   private updateChart(series: TemperatureSeries[], years: number[]): void {
-    const legendData: string[] = series.map((s) => s.name).filter((name): name is string => !!name);
+    const legendData = series.map((s) => s.name!).filter(Boolean);
 
     this.chartOption = {
       title: {
-        text: this.selectedStation ? `Station: ${this.selectedStation.name}` : 'temperature chart',
+        text: this.selectedStation ? `Station: ${this.selectedStation.name}` : 'Temperature Chart',
         left: 'center',
       },
-      tooltip: { trigger: 'axis' },
+
+      tooltip: {
+        trigger: 'axis',
+      },
+
       legend: {
         bottom: 0,
-        show: true,
         data: legendData,
         selectedMode: false,
       },
@@ -210,23 +295,30 @@ export class AppComponent implements OnInit {
       xAxis: {
         type: 'category',
         name: 'YEAR',
-        data: years.map((y) => y.toString()),
         boundaryGap: false,
+        data: years.map((y) => y.toString()),
       },
+
       yAxis: {
         type: 'value',
         name: '°C',
-        axisLabel: { formatter: '{value}' },
       },
-      dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 30 }],
+
+      dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 25 }],
+
       series: series.map((s) => ({
-        name: s.name ?? 'Unknown',
+        name: s.name!,
         type: 'line',
         smooth: false,
         connectNulls: false,
         data: s.data,
         symbol: 'circle',
-        symbolSize: 6,
+        symbolSize: 5,
+
+        sampling: 'lttb',
+
+        progressive: 500,
+        progressiveThreshold: 3000,
       })),
     };
   }
@@ -238,6 +330,10 @@ export class AppComponent implements OnInit {
   }
 
   onReset(): void {
+    this.resetView();
+  }
+
+  private resetView(): void {
     this.stations = [];
     this.selectedStation = null;
     this.yearlyTableData = [];
