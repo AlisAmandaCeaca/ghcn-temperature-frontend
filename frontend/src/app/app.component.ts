@@ -110,7 +110,7 @@ export class AppComponent implements OnInit {
 
       grid: {
         top: 70,
-        bottom: 80,
+        bottom: 150,
         left: 50,
         right: 30,
       },
@@ -288,10 +288,16 @@ export class AppComponent implements OnInit {
       'AUTUMN Max': '#f98832ff', // Hellbraun
       'AUTUMN Min': '#753c00ff', // Dunkelbraun
     };
+    const availableYear = this.selectedStation?.availability;
+    const yearRange = availableYear
+      ? `(${availableYear.firstYear} - ${availableYear.lastYear})`
+      : '';
 
     this.chartOption = {
       title: {
-        text: this.selectedStation ? `Station: ${this.selectedStation.name}` : 'Temperature Chart',
+        text: this.selectedStation
+          ? `Station: ${this.selectedStation.name} ${yearRange}`
+          : 'Temperature Chart',
         left: 'center',
       },
 
@@ -300,9 +306,11 @@ export class AppComponent implements OnInit {
       },
 
       legend: {
+        type: 'scroll',
         bottom: 0,
         data: legendData,
         selectedMode: false,
+        pageButtonPosition: 'end',
       },
 
       xAxis: {
@@ -317,7 +325,7 @@ export class AppComponent implements OnInit {
         name: '°C',
       },
 
-      dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 25 }],
+      dataZoom: [{ type: 'inside' }, { type: 'slider', bottom: 30, height: 25 }],
 
       series: series.map((s) => ({
         name: s.name!,
