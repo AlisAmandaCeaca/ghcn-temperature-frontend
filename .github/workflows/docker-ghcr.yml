@@ -10,7 +10,33 @@ permissions:
   packages: write
 
 jobs:
+  test-frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run frontend unit tests
+        working-directory: ./frontend
+        env:
+          CI: true
+        run: npm run test -- --watch=false
+
   build-and-push:
+    needs: test-frontend
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
